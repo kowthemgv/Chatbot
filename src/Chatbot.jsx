@@ -8,6 +8,8 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import HistoryIcon from "@mui/icons-material/History";
 import SearchIcon from "@mui/icons-material/Search";
 import MenuIcon from "@mui/icons-material/Menu";
+import AddIcon from "@mui/icons-material/Add";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { addMessage } from "./store";
 import axios from "axios";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -35,11 +37,20 @@ const ChatHeader = ({ toggleSidebar }) => (
   </div>
 );
 
-const ChatActions = ({ activeChatTitle }) => (
-  <div className="chat-actions flex justify-between items-center">
+const ChatActions = ({ activeChatTitle, onDeleteChat }) => (
+  <div className="chat-actions flex justify-between items-center p-3 border-b">
     <div className="flex items-center">
       <h3 className="font-medium text-gray-800">{activeChatTitle || "New Conversation"}</h3>
     </div>
+    {activeChatTitle && (
+      <button 
+        onClick={onDeleteChat}
+        className="text-gray-500 hover:text-red-500 transition-colors"
+        title="Delete this conversation"
+      >
+        <DeleteOutlineIcon fontSize="small" />
+      </button>
+    )}
   </div>
 );
 
@@ -80,19 +91,65 @@ const MessageBubble = ({ message, isTyping = false }) => (
   </div>
 );
 
+// Enhanced ChatSidebar component with new chat and delete functionality
+const EnhancedChatSidebar = ({ chatHistory, onSelectChat, activeChatId, isOpen, onNewChat, onDeleteChat }) => {
+  return (
+    <div className={`chat-sidebar ${isOpen ? 'open' : ''}`}>
+      <div className="new-chat-button-container p-3 border-b">
+        <button 
+          className="new-chat-button flex items-center gap-2 w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition-colors"
+          onClick={onNewChat}
+        >
+          <AddIcon fontSize="small" />
+          <span>New Chat</span>
+        </button>
+      </div>
+      
+      <div className="chat-history">
+        {chatHistory.map((chat) => (
+          <div 
+            key={chat.id} 
+            className={`chat-history-item ${activeChatId === chat.id.toString() ? 'active' : ''}`}
+            onClick={() => onSelectChat(chat.id.toString())}
+          >
+            <div className="chat-history-content">
+              <div className="chat-history-title">{chat.title}</div>
+              <div className="chat-history-message">{chat.lastMessage}</div>
+              <div className="chat-history-time">
+                {new Date(chat.timestamp).toLocaleDateString()}
+              </div>
+            </div>
+            <button 
+              className="chat-delete-button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteChat(chat.id);
+              }}
+              title="Delete conversation"
+            >
+              <DeleteOutlineIcon fontSize="small" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const Chatbot = () => {
   const [input, setInput] = useState("");
   const [showWelcome, setShowWelcome] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [chatHistory] = useState([
+  const [chatHistory, setChatHistory] = useState([
     { id: 1, title: "Customer Inquiry", lastMessage: "How can I track my order?", timestamp: Date.now() - 3600000 },
     { id: 2, title: "Order Update", lastMessage: "Your order has been processed", timestamp: Date.now() - 86400000 },
     { id: 3, title: "Support Ticket", lastMessage: "Issue with payment processing", timestamp: Date.now() - 172800000 },
   ]);
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeChatId, setActiveChatId] = useState(searchParams.get("chatId") || null);
+  const [nextChatId, setNextChatId] = useState(4); // For generating new chat IDs
 
   const messages = useSelector((state) => state.chat.messages);
   const dispatch = useDispatch();
@@ -117,8 +174,47 @@ const Chatbot = () => {
   const handleSelectChat = (chatId) => {
     setActiveChatId(chatId);
     setShowWelcome(false);
-    navigate(`?chatId=${chatId}`);
+    setSearchParams({ chatId });
     setIsSidebarOpen(false);
+  };
+
+  const handleNewChat = () => {
+    const newChatId = nextChatId.toString();
+    const newChat = {
+      id: nextChatId,
+      title: `New Conversation ${nextChatId}`,
+      lastMessage: "Start a new conversation",
+      timestamp: Date.now()
+    };
+    
+    setChatHistory([newChat, ...chatHistory]);
+    setNextChatId(nextChatId + 1);
+    setActiveChatId(newChatId);
+    setShowWelcome(true);
+    setSearchParams({ chatId: newChatId });
+    
+    // Clear messages when starting a new chat
+    // This would need to be handled in your Redux store
+    // For now, we'll just navigate to the new chat
+    setIsSidebarOpen(false);
+  };
+
+  const handleDeleteChat = (chatId) => {
+    const updatedChatHistory = chatHistory.filter(chat => chat.id.toString() !== chatId.toString());
+    setChatHistory(updatedChatHistory);
+    
+    // If we're deleting the active chat, switch to a new one or clear
+    if (activeChatId === chatId.toString()) {
+      if (updatedChatHistory.length > 0) {
+        const newActiveChat = updatedChatHistory[0].id.toString();
+        setActiveChatId(newActiveChat);
+        setSearchParams({ chatId: newActiveChat });
+      } else {
+        setActiveChatId(null);
+        setSearchParams({});
+        setShowWelcome(true);
+      }
+    }
   };
 
   const toggleSidebar = () => {
@@ -135,6 +231,17 @@ const Chatbot = () => {
         user: true,
         timestamp: timestamp
       }));
+      
+      // Update the last message in chat history
+      if (activeChatId) {
+        setChatHistory(prevHistory => 
+          prevHistory.map(chat => 
+            chat.id.toString() === activeChatId 
+              ? { ...chat, lastMessage: input, timestamp: timestamp }
+              : chat
+          )
+        );
+      }
       
       setInput("");
       
@@ -185,15 +292,20 @@ const Chatbot = () => {
     <div className="chat-container">
       <ChatHeader toggleSidebar={toggleSidebar} />
       <div className="flex flex-1 overflow-hidden">
-        <ChatSidebar 
+        <EnhancedChatSidebar 
           chatHistory={chatHistory} 
           onSelectChat={handleSelectChat} 
           activeChatId={activeChatId}
           isOpen={isSidebarOpen}
+          onNewChat={handleNewChat}
+          onDeleteChat={handleDeleteChat}
         />
         
         <div className="flex-1 flex flex-col h-full relative">
-          <ChatActions activeChatTitle={activeChatTitle} />
+          <ChatActions 
+            activeChatTitle={activeChatTitle} 
+            onDeleteChat={() => handleDeleteChat(activeChatId)}
+          />
 
           {/* Chat messages area */}
           <div 
