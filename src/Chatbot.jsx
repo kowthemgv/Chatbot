@@ -25,8 +25,8 @@ const ChatHeader = ({ toggleSidebar }) => (
       >
         <MenuIcon />
       </button>
-      <img src="logo.png" alt="Logo" className="h-10 w-10" />
-      <h2 className="text-xl font-semibold text-gray-800">SAP-G Chatbot</h2>
+      <img src="image.png" alt="Logo" className="h-10 w-10" />
+      <h2 className="text-xl font-semibold text-gray-800">AssistIQ</h2>
     </div>
     <div className="flex items-center gap-3">
       <AccountCircleIcon fontSize="large" className="text-gray-600" />
@@ -56,7 +56,7 @@ const ChatActions = ({ activeChatTitle, onDeleteChat }) => (
 
 const WelcomeMessage = () => (
   <div className="welcome-container">
-    <div className="welcome-title">Welcome to SAP-G Chatbot</div>
+    <div className="welcome-title">Welcome to AssistIQ</div>
     <div className="welcome-subtitle">
       Your advanced assistant for SAP business solutions. Ask questions about your SAP systems, 
       get help with issues, or explore best practices.
@@ -104,7 +104,7 @@ const EnhancedChatSidebar = ({ chatHistory, onSelectChat, activeChatId, isOpen, 
           <span>New Chat</span>
         </button>
       </div>
-      
+
       <div className="chat-history">
         {chatHistory.map((chat) => (
           <div 
