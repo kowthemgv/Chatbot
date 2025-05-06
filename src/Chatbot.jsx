@@ -13,7 +13,13 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import ChatIcon from "@mui/icons-material/Chat";
 import CloseIcon from "@mui/icons-material/Close";
 import ForumIcon from "@mui/icons-material/Forum";
-import { addMessage } from "./store";
+import { 
+  addMessage, 
+  setStreamingMessage, 
+  appendToStreamingMessage,
+  commitStreamingMessage,
+  clearStreamingMessage 
+} from "./store";
 import axios from "axios";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import "./Chatbot.css";
@@ -65,7 +71,16 @@ const WelcomeMessage = () => (
   </div>
 );
 
-const MessageBubble = ({ message, isTyping = false }) => (
+// Enhanced typing indicator with professional animation
+const TypingIndicator = () => (
+  <div className="typing-indicator">
+    <div className="typing-dot"></div>
+    <div className="typing-dot"></div>
+    <div className="typing-dot"></div>
+  </div>
+);
+
+const MessageBubble = ({ message, isTyping = false, isStreaming = false }) => (
   <div
     className={`flex ${message.user ? "justify-end" : "justify-start"} mb-4`}
   >
@@ -75,22 +90,20 @@ const MessageBubble = ({ message, isTyping = false }) => (
       }`}
     >
       {isTyping ? (
-        <div className="typing-indicator">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
+        <TypingIndicator />
       ) : (
         <>
           {message.text}
-          <div className="message-time">
-            {message.timestamp
-              ? new Date(message.timestamp).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : ""}
-          </div>
+          {!isStreaming && (
+            <div className="message-time">
+              {message.timestamp
+                ? new Date(message.timestamp).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : ""}
+            </div>
+          )}
         </>
       )}
     </div>
@@ -141,10 +154,8 @@ const EnhancedChatSidebar = ({
         isOpen ? "block" : "hidden"
       }`}
     >
-      
-
       <div className="sidebar-header flex justify-between items-center p-4 border-b">
-        <h3 className="font-medium text-grey-800 fkex items-center">
+        <h3 className="font-medium text-grey-800 flex items-center">
           <ForumIcon fontSize="small" className="mr-2 text-blue-500" />
           Chat History
         </h3>
@@ -167,13 +178,13 @@ const EnhancedChatSidebar = ({
 
         <div className="relative mb-4">
           <SearchIcon
-            className="absolute left-3 top-1/2 trasnform -translate-y-1/2 text-gray-400"
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
             fontSize="small"
           />
           <input
             type="text"
             placeholder="Search Conversation"
-            className="w-full bg-gray-100 roubded-md py-2 pl-10 pr-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full bg-gray-100 rounded-md py-2 pl-10 pr-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -219,7 +230,7 @@ const EnhancedChatSidebar = ({
                 {(isHovering === chat.id ||
                   activeChatId === chat.id.toString()) && (
                   <button
-                    className="delete-btn ml-2 text-gray-400 hover: text-red-500 transition-colors"
+                    className="delete-btn ml-2 text-gray-400 hover:text-red-500 transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       onDeleteChat(chat.id);
@@ -277,10 +288,12 @@ const Chatbot = () => {
   const [nextChatId, setNextChatId] = useState(4); // For generating new chat IDs
 
   const messages = useSelector((state) => state.chat.messages);
+  const streamingMessage = useSelector((state) => state.chat.streamingMessage);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const chatWindowRef = useRef(null);
   const inputRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   useEffect(() => {
     const chatIdFromUrl = searchParams.get("chatId");
@@ -291,15 +304,15 @@ const Chatbot = () => {
   }, [searchParams, activeChatId]);
 
   useEffect(() => {
-    if (chatWindowRef.current && messages.length > 0) {
+    if (chatWindowRef.current) {
       chatWindowRef.current.scrollTop = chatWindowRef.current.scrollHeight;
     }
-  }, [messages.length]);
+  }, [messages.length, streamingMessage]);
 
   const handleSelectChat = (chatId) => {
     setActiveChatId(chatId);
     setShowWelcome(false);
-    setSearchParams({ chatId });
+    setSearchParams(chatId ? { chatId } : {});
     setIsSidebarOpen(false);
   };
 
@@ -348,7 +361,160 @@ const Chatbot = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
+  const processStreamChunk = (chunk) => {
+    try {
+      // Parse the JSON response
+      const data = JSON.parse(chunk);
+      
+      // Extract content from Gemini API response structure
+      if (data.candidates && data.candidates.length > 0) {
+        const content = data.candidates[0].content;
+        if (content && content.parts && content.parts.length > 0) {
+          return content.parts[0].text || "";
+        }
+      }
+      
+      // Fallback if structure is different
+      return data.content || data.text || data.message || "";
+    } catch (e) {
+      console.error("Error parsing stream chunk:", e);
+      // If it's not valid JSON, return empty string
+      return "";
+    }
+  };
+
+  const cancelOngoingRequest = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      dispatch(clearStreamingMessage());
+      setIsTyping(false);
+    }
+  };
+
   const handleSend = async () => {
+    if (input.trim() !== "") {
+      setShowWelcome(false);
+
+      const timestamp = Date.now();
+      const userMessage = {
+        text: input,
+        user: true,
+        timestamp: timestamp,
+      };
+      
+      dispatch(addMessage(userMessage));
+
+      // Update the last message in chat history
+      if (activeChatId) {
+        setChatHistory((prevHistory) =>
+          prevHistory.map((chat) =>
+            chat.id.toString() === activeChatId
+              ? { ...chat, lastMessage: input, timestamp: timestamp }
+              : chat
+          )
+        );
+      }
+
+      setInput("");
+
+      // Focus back on input after sending
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+
+      try {
+        // Cancel any existing request
+        cancelOngoingRequest();
+        
+        // Create a new abort controller for this request
+        abortControllerRef.current = new AbortController();
+        const signal = abortControllerRef.current.signal;
+
+        setIsTyping(true);
+        
+        // Initialize streaming message
+        const initialStreamingMessage = {
+          text: "",
+          user: false,
+          timestamp: Date.now(),
+        };
+        dispatch(setStreamingMessage(initialStreamingMessage));
+        const api_key = 'AIzaSyAgYFkuHus4x0h1KDr1_7M3DiyjYn0jh6g';
+
+        // Make the API call with the actual user input
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${api_key}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            contents: [
+              {
+                parts: [{ text: input }]
+              }
+            ]
+          }),
+          signal: signal
+        });
+
+        // Check if response is successful
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`API error: ${errorData.error?.message || response.statusText}`);
+        }
+
+        // Parse the response as JSON
+        const responseData = await response.json();
+        
+        // Extract the text from Gemini's response structure
+        let responseText = "";
+        if (responseData.candidates && 
+            responseData.candidates.length > 0 && 
+            responseData.candidates[0].content && 
+            responseData.candidates[0].content.parts && 
+            responseData.candidates[0].content.parts.length > 0) {
+          responseText = responseData.candidates[0].content.parts[0].text;
+        }
+
+        // Simulate streaming for non-streaming API
+        let accumulatedText = "";
+        for (let i = 0; i < responseText.length; i += 3) {
+          await new Promise(resolve => setTimeout(resolve, 10));
+          const chunk = responseText.substring(i, Math.min(i + 3, responseText.length));
+          accumulatedText += chunk;
+          dispatch(setStreamingMessage({
+            text: accumulatedText,
+            user: false,
+            timestamp: Date.now(),
+          }));
+        }
+
+        // Commit the final message
+        dispatch(commitStreamingMessage());
+        setIsTyping(false);
+
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          console.log('Request was cancelled');
+        } else {
+          setIsTyping(false);
+          dispatch(clearStreamingMessage());
+          dispatch(
+            addMessage({
+              text: "Error fetching response. Please try again.",
+              user: false,
+              timestamp: Date.now(),
+            })
+          );
+          console.error("Error:", error);
+        }
+      }
+    }
+  };
+
+  // For demo/development purposes - fallback to non-streaming API if needed
+  const handleSendFallback = async () => {
     if (input.trim() !== "") {
       setShowWelcome(false);
 
@@ -381,21 +547,27 @@ const Chatbot = () => {
 
       try {
         setIsTyping(true);
-        const { data } = await axios.post(
-          "https://run.mocky.io/v3/610f9d23-c4d1-4746-a28f-06401aeb89e0",
-          { message: input }
-        );
-
-        setTimeout(() => {
-          dispatch(
-            addMessage({
-              text: data,
-              user: false,
-              timestamp: Date.now(),
-            })
-          );
-          setIsTyping(false);
-        }, 1000);
+        
+        // Mock streaming effect with a predefined response for testing
+        const response = "Thank you for your message. This is a simulated streaming response to test functionality. The streaming API implementation can be fully tested once your backend supports it.";
+        
+        // Initialize the streaming message
+        dispatch(setStreamingMessage({
+          text: "",
+          user: false,
+          timestamp: Date.now(),
+        }));
+        
+        // Simulate streaming by appending characters one by one
+        for (let i = 0; i < response.length; i++) {
+          await new Promise(resolve => setTimeout(resolve, 10));
+          dispatch(appendToStreamingMessage({ text: response[i] }));
+        }
+        
+        // Commit the final message
+        dispatch(commitStreamingMessage());
+        setIsTyping(false);
+        
       } catch (error) {
         setIsTyping(false);
         dispatch(
@@ -449,7 +621,10 @@ const Chatbot = () => {
                 {messages.map((msg, index) => (
                   <MessageBubble key={index} message={msg} />
                 ))}
-                {isTyping && (
+                {streamingMessage && (
+                  <MessageBubble message={streamingMessage} isStreaming={true} />
+                )}
+                {isTyping && !streamingMessage && (
                   <MessageBubble message={{ user: false }} isTyping={true} />
                 )}
               </>
@@ -475,7 +650,7 @@ const Chatbot = () => {
               <button
                 className="send-button"
                 onClick={handleSend}
-                disabled={input.trim() === ""}
+                disabled={input.trim() === "" || isTyping}
               >
                 <SendIcon fontSize="small" />
               </button>
