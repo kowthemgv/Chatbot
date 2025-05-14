@@ -38,7 +38,7 @@ const Auth = () => {
       <div className="form-container">
         <div className="auth-header">
           <h2>Welcome Back</h2>
-          <p className="subtitle">Sign in to continue to the chatbot</p>
+          <p className="subtitle">Sign in to continue to the AssistIQ</p>
         </div>
         
         <form onSubmit={handleLogin}>
