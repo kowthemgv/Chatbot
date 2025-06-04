@@ -2,36 +2,57 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./Auth.css";
+import Users from '../authentication.json';
+import { Alert } from "@mui/material";
 
 const Auth = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [alert, setAlert] = useState({type: '', message: ''});
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+//   const handleLogin = async (e) => {
+//     e.preventDefault();
+//     setIsLoading(true);
+
+//     try {
+//       const { data } = await axios.post("https://your-backend.com/auth", {
+//         username,
+//         password,
+//       });
+
+//       if (data.approved) {
+//         localStorage.setItem("token", data.token);
+//         navigate("/chatbot");
+//       } else {
+//         alert("Access Denied!");
+//       }
+//     } catch (error) {
+//       console.error("Login Error:", error);
+//       alert("Error authenticating! Try again.");
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+  const handleLogin = () => {
     setIsLoading(true);
 
-    try {
-      const { data } = await axios.post("https://your-backend.com/auth", {
-        username,
-        password,
-      });
+    setTimeout(() => {
+        const isAuthenticated = Users.some(
+        user => user.username === username && user.password === password
+        );
+        if(isAuthenticated){
+            setAlert({type: 'success', message: 'Login Successful!'});
+            navigate('/chatbot');
+        } else {
+            setAlert({type: 'error', message: 'Invalid Credentials'});
+        }
 
-      if (data.approved) {
-        localStorage.setItem("token", data.token);
-        navigate("/chatbot");
-      } else {
-        alert("Access Denied!");
-      }
-    } catch (error) {
-      console.error("Login Error:", error);
-      alert("Error authenticating! Try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        setIsLoading(false);
+    }, 1500);
+  }
 
   return (
     <div className="auth-container">
@@ -41,7 +62,7 @@ const Auth = () => {
           <p className="subtitle">Sign in to continue to the AssistIQ</p>
         </div>
         
-        <form onSubmit={handleLogin}>
+        <form>
           <div className="input-group">
             <input 
               type="text" 
@@ -67,11 +88,15 @@ const Auth = () => {
           <div className="forgot-password">
             <a href="/reset-password">Forgot Password?</a>
           </div>
-          
+          {
+            alert.message &&
+            <Alert severity={alert.type}>{alert.message}</Alert>
+          }
           <button 
             type="submit" 
             className={`login-btn ${isLoading ? 'loading' : ''}`}
             disabled={isLoading}
+            onClick={handleLogin}
           >
             {isLoading ? 'Signing in...' : 'Sign In'}
           </button>
