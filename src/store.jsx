@@ -5,10 +5,20 @@ const chatSlice = createSlice({
   initialState: { messages: [] },
   reducers: {
     addMessage: (state, action) => {
-      state.messages = [...state.messages,action.payload];
+      state.messages = [...state.messages, action.payload];
+    },
+    clearMessages: (state) => {
+      state.messages = [];
+    },
+    loadMessages: (state, action) => {
+      state.messages = action.payload;
     },
   },
 });
 
-export const { addMessage } = chatSlice.actions;
-export const store = configureStore({ reducer: { chat: chatSlice.reducer } });
+export const { addMessage, clearMessages, loadMessages } = chatSlice.actions;
+export const store = configureStore({ 
+  reducer: { 
+    chat: chatSlice.reducer 
+  } 
+});

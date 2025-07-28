@@ -1,4 +1,4 @@
-/* Auth.css - Professional UI */
+/* Complete Auth.css - Professional UI with all styles */
 
 /* Global styling */
 * {
@@ -22,6 +22,7 @@
   border-radius: 12px;
   padding: 40px 30px;
   transition: transform 0.3s ease;
+  animation: fadeInUp 0.6s ease-out;
 }
 
 .form-container:hover {
@@ -76,6 +77,10 @@ input:focus {
   background-color: white;
 }
 
+input:focus + label {
+  color: #2563eb;
+}
+
 label {
   position: absolute;
   left: 16px;
@@ -120,6 +125,17 @@ input::placeholder {
   text-decoration: underline;
 }
 
+/* Alert container */
+.alert-container {
+  margin: 15px 0;
+  width: 100%;
+}
+
+.alert-container .MuiAlert-root {
+  border-radius: 8px;
+  font-size: 14px;
+}
+
 /* Button styling */
 .login-btn {
   background-color: #3182ce;
@@ -150,8 +166,14 @@ input::placeholder {
 }
 
 .login-btn:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: not-allowed;
+  background-color: #ccc;
+}
+
+.login-btn:disabled:hover {
+  background-color: #ccc;
+  transform: none;
 }
 
 /* Footer styling */
@@ -172,4 +194,77 @@ input::placeholder {
 .auth-footer a:hover {
   color: #2b6cb0;
   text-decoration: underline;
+}
+
+/* Disabled option styling for chatbot */
+.clickable-option.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #f3f4f6 !important;
+  border-color: #d1d5db !important;
+  transform: none !important;
+  position: relative;
+}
+
+.clickable-option.disabled:hover {
+  border-color: #d1d5db !important;
+  background-color: #f3f4f6 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.clickable-option.disabled .option-bubble-title {
+  color: #9ca3af;
+}
+
+.clickable-option.disabled .option-bubble-description {
+  color: #d1d5db;
+}
+
+.selected-indicator {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background-color: #10b981;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .auth-container {
+    padding: 10px;
+  }
+  
+  .form-container {
+    width: 100%;
+    max-width: 380px;
+    padding: 30px 20px;
+  }
+  
+  .auth-header h2 {
+    font-size: 24px;
+  }
+  
+  input {
+    font-size: 16px;
+  }
 }
