@@ -10,20 +10,51 @@ import MessageBubble from "./components/MessageBubble";
 import ChatHeader from "./components/ChatHeader";
 import WelcomeMessage from "./components/WelcomeMessage";
 
-// Predefined questions configuration
+// Enhanced Predefined questions configuration with service types
 const PREDEFINED_QUESTIONS = {
-  mainCategories: [
+  serviceTypes: [
     {
-      id: 'sap_systems',
-      title: 'SAP System',
-      description: 'Get help with SAP system queries'
+      id: 'assistiq',
+      title: 'AssistIQ',
+      description: 'SAP business solutions and system queries',
     },
     {
-      id: 'non_sap_systems',
-      title: 'Non SAP System',
-      description: 'Get help with Non-SAP system queries'
+      id: 'atlas',
+      title: 'Atlas',
+      description: 'Collaboration and project management tools',
     }
   ],
+  mainCategories: {
+    assistiq: [
+      {
+        id: 'sap_systems',
+        title: 'SAP System',
+        description: 'Get help with SAP system queries'
+      },
+      {
+        id: 'non_sap_systems',
+        title: 'Non SAP System',
+        description: 'Get help with Non-SAP system queries'
+      }
+    ],
+    atlas: [
+      {
+        id: 'sharepoint',
+        title: 'SharePoint',
+        description: 'Document management and collaboration'
+      },
+      {
+        id: 'jira',
+        title: 'Jira',
+        description: 'Project tracking and issue management'
+      },
+      {
+        id: 'confluence',
+        title: 'Confluence',
+        description: 'Team collaboration and documentation'
+      }
+    ]
+  },
   subCategories: {
     sap_systems: [
       {
@@ -43,7 +74,11 @@ const PREDEFINED_QUESTIONS = {
         title: 'test',
         description: 'Queries related to test'
       },
-    ]
+    ],
+    // Atlas subcategories can be added here if needed for further breakdown
+    sharepoint: [],
+    jira: [],
+    confluence: []
   }
 };
 
@@ -100,9 +135,10 @@ const Chatbot = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [user, setUser] = useState(null);
   
-  // Flow state for predefined questions
+  // Enhanced flow state for service selection
   const [currentFlow, setCurrentFlow] = useState({
-    step: 'main',
+    step: 'service', // service -> main -> sub -> prompt -> conversation
+    selectedService: null,
     selectedMain: null,
     selectedSub: null
   });
@@ -130,7 +166,6 @@ const Chatbot = () => {
   // Initialize on component mount
   useEffect(() => {
     const initializeApp = () => {
-      // Load saved data
       const savedChatHistory = loadFromStorage(STORAGE_KEYS.CHAT_HISTORY, []);
       const savedActiveChatId = loadFromStorage(STORAGE_KEYS.ACTIVE_CHAT_ID);
       const savedNextChatId = loadFromStorage(STORAGE_KEYS.NEXT_CHAT_ID, 1);
@@ -142,13 +177,12 @@ const Chatbot = () => {
       const targetChatId = chatIdFromUrl || savedActiveChatId;
       
       if (targetChatId && savedChatHistory.find(chat => chat.id.toString() === targetChatId)) {
-        // Load existing chat
         setActiveChatId(targetChatId);
         
-        // Load messages for this chat
         const savedMessages = loadFromStorage(`${STORAGE_KEYS.MESSAGES}${targetChatId}`, []);
         const savedFlowState = loadFromStorage(`${STORAGE_KEYS.FLOW_STATE}${targetChatId}`, {
           step: 'conversation',
+          selectedService: null,
           selectedMain: null,
           selectedSub: null
         });
@@ -160,7 +194,6 @@ const Chatbot = () => {
           setSearchParams({ chatId: targetChatId });
         }
       } else {
-        // Create new chat if no valid existing chat
         handleNewChat();
       }
       
@@ -205,18 +238,18 @@ const Chatbot = () => {
     saveToStorage(STORAGE_KEYS.NEXT_CHAT_ID, nextChatId);
   }, [nextChatId]);
 
-  // Show initial welcome and options for new chats
+  // Show initial welcome and service selection for new chats
   useEffect(() => {
-    if (isInitialized && activeChatId && messages.length === 0 && currentFlow.step === 'main') {
+    if (isInitialized && activeChatId && messages.length === 0 && currentFlow.step === 'service') {
       setTimeout(() => {
         dispatch(
           addMessage({
-            text: "Hello! I'm AssistIQ, your advanced assistant for SAP business solutions. Please select a category to get started:",
+            text: "Hello! Welcome to our intelligent assistant platform. Please select a service to get started:",
             user: false,
             timestamp: Date.now(),
             type: 'options',
-            options: PREDEFINED_QUESTIONS.mainCategories,
-            isSubCategory: false
+            options: PREDEFINED_QUESTIONS.serviceTypes,
+            isServiceSelection: true
           })
         );
       }, 1500);
@@ -233,19 +266,12 @@ const Chatbot = () => {
   }, [messages.length]);
 
   const handleSignIn = () => {
-    // Navigate to sign in page - you can replace this with your login route
     navigate('/login');
   };
 
   const handleSignOut = () => {
-    // Clear user data
     setUser(null);
     removeFromStorage(STORAGE_KEYS.USER_DATA);
-    
-    // Optionally clear all chat data on logout
-    // Object.values(STORAGE_KEYS).forEach(key => removeFromStorage(key));
-    
-    // Navigate to login or home page
     navigate('/login');
   };
 
@@ -260,30 +286,81 @@ const Chatbot = () => {
       })
     );
 
-    if (currentFlow.step === 'main') {
+    // Service Type Selection
+    if (currentFlow.step === 'service') {
       setCurrentFlow({
-        step: 'sub',
-        selectedMain: option.id,
+        step: 'main',
+        selectedService: option.id,
+        selectedMain: null,
         selectedSub: null
       });
 
       setTimeout(() => {
-        const subCategories = PREDEFINED_QUESTIONS.subCategories[option.id];
+        const mainCategories = PREDEFINED_QUESTIONS.mainCategories[option.id];
+        const serviceTitle = option.title;
+        
         dispatch(
           addMessage({
-            text: `Great! You selected ${option.title}. Now please choose a specific area:`,
+            text: `Great! You selected ${serviceTitle}. Now please choose a specific category:`,
             user: false,
             timestamp: Date.now(),
             type: 'options',
-            options: subCategories,
-            isSubCategory: true
+            options: mainCategories,
+            isMainCategory: true
           })
         );
       }, 800);
+    }
+    // Main Category Selection
+    else if (currentFlow.step === 'main') {
+      const subCategories = PREDEFINED_QUESTIONS.subCategories[option.id];
+      
+      // Check if subcategories exist for this main category
+      if (subCategories && subCategories.length > 0) {
+        setCurrentFlow({
+          step: 'sub',
+          selectedService: currentFlow.selectedService,
+          selectedMain: option.id,
+          selectedSub: null
+        });
 
-    } else if (currentFlow.step === 'sub') {
+        setTimeout(() => {
+          dispatch(
+            addMessage({
+              text: `Perfect! You selected ${option.title}. Now please choose a specific area:`,
+              user: false,
+              timestamp: Date.now(),
+              type: 'options',
+              options: subCategories,
+              isSubCategory: true
+            })
+          );
+        }, 800);
+      } else {
+        // No subcategories, go directly to conversation
+        setCurrentFlow({
+          step: 'conversation',
+          selectedService: currentFlow.selectedService,
+          selectedMain: option.id,
+          selectedSub: null
+        });
+
+        setTimeout(() => {
+          dispatch(
+            addMessage({
+              text: `Perfect! You've selected ${option.title}. Please describe your specific question or issue in detail, and I'll help you with it.`,
+              user: false,
+              timestamp: Date.now(),
+            })
+          );
+        }, 800);
+      }
+    }
+    // Sub Category Selection
+    else if (currentFlow.step === 'sub') {
       setCurrentFlow({
-        step: 'prompt',
+        step: 'conversation',
+        selectedService: currentFlow.selectedService,
         selectedMain: currentFlow.selectedMain,
         selectedSub: option.id
       });
@@ -291,15 +368,15 @@ const Chatbot = () => {
       setTimeout(() => {
         dispatch(
           addMessage({
-            text: `Perfect! You've selected ${option.title}. Please describe your specific question or issue in detail, and I'll help you with it.`,
+            text: `Excellent! You've selected ${option.title}. Please describe your specific question or issue in detail, and I'll help you with it.`,
             user: false,
             timestamp: Date.now(),
           })
         );
-        setCurrentFlow(prev => ({ ...prev, step: 'conversation' }));
       }, 800);
     }
 
+    // Update chat history
     if (activeChatId) {
       setChatHistory((prevHistory) =>
         prevHistory.map((chat) =>
@@ -312,7 +389,6 @@ const Chatbot = () => {
   };
 
   const handleSelectChat = (chatId) => {
-    // Save current chat data before switching
     if (activeChatId) {
       saveToStorage(`${STORAGE_KEYS.MESSAGES}${activeChatId}`, messages);
       saveToStorage(`${STORAGE_KEYS.FLOW_STATE}${activeChatId}`, currentFlow);
@@ -322,10 +398,10 @@ const Chatbot = () => {
     setSearchParams({ chatId });
     setIsSidebarOpen(false);
 
-    // Load messages and flow state for the selected chat
     const savedMessages = loadFromStorage(`${STORAGE_KEYS.MESSAGES}${chatId}`, []);
     const savedFlowState = loadFromStorage(`${STORAGE_KEYS.FLOW_STATE}${chatId}`, {
       step: 'conversation',
+      selectedService: null,
       selectedMain: null,
       selectedSub: null
     });
@@ -352,14 +428,14 @@ const Chatbot = () => {
     setIsSidebarOpen(false);
     
     setCurrentFlow({
-      step: 'main',
+      step: 'service',
+      selectedService: null,
       selectedMain: null,
       selectedSub: null
     });
   };
 
   const handleDeleteChat = (chatId) => {
-    // Remove chat data from storage
     removeFromStorage(`${STORAGE_KEYS.MESSAGES}${chatId}`);
     removeFromStorage(`${STORAGE_KEYS.FLOW_STATE}${chatId}`);
     
@@ -386,16 +462,23 @@ const Chatbot = () => {
     if (input.trim() !== "") {
       const timestamp = Date.now();
       
+      // Enhanced flow context with service information
+      const flowContext = currentFlow.selectedService ? {
+        service: currentFlow.selectedService,
+        serviceTitle: PREDEFINED_QUESTIONS.serviceTypes.find(s => s.id === currentFlow.selectedService)?.title,
+        mainCategory: currentFlow.selectedMain,
+        mainCategoryTitle: currentFlow.selectedMain ? 
+          PREDEFINED_QUESTIONS.mainCategories[currentFlow.selectedService]?.find(c => c.id === currentFlow.selectedMain)?.title : null,
+        subCategory: currentFlow.selectedSub,
+        subCategoryTitle: currentFlow.selectedSub ? 
+          PREDEFINED_QUESTIONS.subCategories[currentFlow.selectedMain]?.find(s => s.id === currentFlow.selectedSub)?.title : null
+      } : null;
+
       const messageData = {
         text: input,
         user: true,
         timestamp: timestamp,
-        flowContext: (currentFlow.selectedMain && currentFlow.selectedSub) ? {
-          mainCategory: currentFlow.selectedMain,
-          subCategory: currentFlow.selectedSub,
-          mainCategoryTitle: PREDEFINED_QUESTIONS.mainCategories.find(c => c.id === currentFlow.selectedMain)?.title,
-          subCategoryTitle: PREDEFINED_QUESTIONS.subCategories[currentFlow.selectedMain]?.find(s => s.id === currentFlow.selectedSub)?.title
-        } : null
+        flowContext: flowContext
       };
 
       dispatch(addMessage(messageData));
@@ -419,14 +502,17 @@ const Chatbot = () => {
       try {
         setIsTyping(true);
         
+        // Enhanced API payload with service context
         const apiPayload = {
           message: input,
-          context: messageData.flowContext ? {
-            category: messageData.flowContext.mainCategoryTitle,
-            subCategory: messageData.flowContext.subCategoryTitle,
+          context: flowContext ? {
+            service: flowContext.serviceTitle,
+            category: flowContext.mainCategoryTitle,
+            subCategory: flowContext.subCategoryTitle,
           } : null,
           conversationFlow: currentFlow,
-          user: user // Include user context if logged in
+          user: user,
+          serviceType: currentFlow.selectedService 
         };
 
         const { data } = await axios.post(
@@ -468,7 +554,7 @@ const Chatbot = () => {
     : "New Conversation";
 
   const shouldShowInput = currentFlow.step === 'conversation' || messages.length > 1;
-  const shouldShowWelcome = messages.length === 0 && currentFlow.step === 'main';
+  const shouldShowWelcome = messages.length === 0 && currentFlow.step === 'service';
 
   if (!isInitialized) {
     return (
@@ -501,6 +587,7 @@ const Chatbot = () => {
                 message={msg} 
                 onOptionClick={handleOptionClick}
                 currentFlowStep={currentFlow.step}
+                selectedService={currentFlow.selectedService}
                 selectedMainCategory={currentFlow.selectedMain}
                 selectedSubCategory={currentFlow.selectedSub}
               />

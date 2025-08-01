@@ -182,9 +182,9 @@ const Auth = () => {
           </button>
         </form>
         
-        <div className="auth-footer">
+        {/* <div className="auth-footer">
           <p>Don't have an account? <a href="/register">Create Account</a></p>
-        </div>
+        </div> */}
       </div>
     </div>
   );
