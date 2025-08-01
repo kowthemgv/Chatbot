@@ -1,24 +1,23 @@
 // Chatbot.js
 import React, { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import SendIcon from "@mui/icons-material/Send";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import HistoryIcon from "@mui/icons-material/History";
 import SearchIcon from "@mui/icons-material/Search";
 import MenuIcon from "@mui/icons-material/Menu";
-import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import ChatIcon from "@mui/icons-material/Chat";
 import CloseIcon from "@mui/icons-material/Close";
 import ForumIcon from "@mui/icons-material/Forum";
-import LogoutIcon from "@mui/icons-material/Logout";
 import { addMessage, clearMessages, loadMessages } from "./store";
 import axios from "axios";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import "./Chatbot.css";
-import DropdownComponent from "./DropDown";
+import MessageBubble from "./components/MessageBubble";
+import ChatHeader from "./components/ChatHeader";
+import WelcomeMessage from "./components/WelcomeMessage";
 
 // Predefined questions configuration
 const PREDEFINED_QUESTIONS = {
@@ -93,155 +92,12 @@ const removeFromStorage = (key) => {
   }
 };
 
-const ChatHeader = ({ onNewChat, user, onSignIn, onSignOut }) => (
-  <div className="chat-header flex justify-between items-center p-4 bg-white border-b shadow-sm">
-    <div className="flex items-center gap-4">
-      <img src="image.png" alt="Logo" className="h-10 w-10" />
-      <h2 className="text-xl font-semibold text-gray-800">AssistIQ</h2>
-    </div>
-    <div className="flex items-center gap-3">
-      <button 
-        onClick={onNewChat}
-        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-2"
-      >
-        <AddIcon fontSize="small" />
-        New Chat
-      </button>
-      
-      {user ? (
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <AccountCircleIcon fontSize="large" className="text-gray-600" />
-            <span className="text-gray-800 font-medium">{user.name}</span>
-          </div>
-          <button 
-            onClick={onSignOut}
-            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors text-sm font-medium flex items-center gap-2"
-          >
-            <LogoutIcon fontSize="small" />
-            Sign Out
-          </button>
-        </div>
-      ) : (
-        <div className="flex items-center gap-3">
-          <AccountCircleIcon fontSize="large" className="text-gray-600" />
-          <button 
-            onClick={onSignIn}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
-          >
-            Sign In
-          </button>
-        </div>
-      )}
-    </div>
-  </div>
-);
-
 const ChatActions = ({ activeChatTitle, onDeleteChat }) => (
   <div className="chat-actions flex justify-between items-center p-3 border-b">
     <div className="flex items-center">
       <h3 className="font-medium text-gray-800">
         {activeChatTitle || "New Conversation"}
       </h3>
-    </div>
-    <DropdownComponent/>
-  </div>
-);
-
-const ClickableOption = ({ option, onClick, isSubCategory = false, isDisabled = false }) => (
-  <div 
-    className={`clickable-option ${isSubCategory ? 'sub-option-bubble' : 'main-option-bubble'} ${isDisabled ? 'disabled' : ''}`}
-    onClick={isDisabled ? undefined : () => onClick(option)}
-  >
-    <div className="option-bubble-title">{option.title}</div>
-    <div className="option-bubble-description">{option.description}</div>
-    {isDisabled && <div className="selected-indicator">✓ Selected</div>}
-  </div>
-);
-
-const MessageBubble = ({ message, isTyping = false, onOptionClick, currentFlowStep, selectedMainCategory, selectedSubCategory }) => {
-  if (message.type === 'options') {
-    return (
-      <div className="flex justify-start mb-4">
-        <div className="bot-message options-message">
-          <div className="options-message-text">{message.text}</div>
-          <div className="options-container">
-            {message.options.map((option) => {
-              // Determine if this option should be disabled
-              let isDisabled = false;
-              
-              if (!message.isSubCategory) {
-                // Main category options - disable if we've moved past main step and this was selected
-                isDisabled = currentFlowStep !== 'main' && selectedMainCategory === option.id;
-              } else {
-                // Sub category options - disable if we've moved past sub step and this was selected
-                isDisabled = currentFlowStep === 'conversation' && selectedSubCategory === option.id;
-              }
-              
-              return (
-                <ClickableOption
-                  key={option.id}
-                  option={option}
-                  onClick={onOptionClick}
-                  isSubCategory={message.isSubCategory}
-                  isDisabled={isDisabled}
-                />
-              );
-            })}
-          </div>
-          <div className="message-time">
-            {message.timestamp
-              ? new Date(message.timestamp).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : ""}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={`flex ${message.user ? "justify-end" : "justify-start"} mb-4`}
-    >
-      <div
-        className={`message-bubble ${
-          message.user ? "user-message" : "bot-message"
-        }`}
-      >
-        {isTyping ? (
-          <div className="typing-indicator">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-        ) : (
-          <>
-            {message.text}
-            <div className="message-time">
-              {message.timestamp
-                ? new Date(message.timestamp).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : ""}
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const WelcomeMessage = () => (
-  <div className="welcome-message-container">
-    <div className="welcome-message-bubble">
-      <div className="welcome-title">Welcome to AssistIQ! 👋</div>
-      <div className="welcome-subtitle">
-        Your advanced assistant for SAP business solutions. I'm here to help you with your queries.
-      </div>
     </div>
   </div>
 );
