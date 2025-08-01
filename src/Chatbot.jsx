@@ -1,16 +1,7 @@
 // Chatbot.js
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import SendIcon from "@mui/icons-material/Send";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import HistoryIcon from "@mui/icons-material/History";
-import SearchIcon from "@mui/icons-material/Search";
-import MenuIcon from "@mui/icons-material/Menu";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import ChatIcon from "@mui/icons-material/Chat";
-import CloseIcon from "@mui/icons-material/Close";
-import ForumIcon from "@mui/icons-material/Forum";
 import { addMessage, clearMessages, loadMessages } from "./store";
 import axios from "axios";
 import { useNavigate, useSearchParams } from "react-router-dom";
