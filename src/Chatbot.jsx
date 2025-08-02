@@ -89,7 +89,8 @@ const STORAGE_KEYS = {
   MESSAGES: 'assistiq_messages_',
   FLOW_STATE: 'assistiq_flow_state_',
   USER_DATA: 'assistiq_user_data',
-  NEXT_CHAT_ID: 'assistiq_next_chat_id'
+  NEXT_CHAT_ID: 'assistiq_next_chat_id',
+  AUTH_TOKEN: 'assistiq_auth_token'
 };
 
 const saveToStorage = (key, data) => {
@@ -147,7 +148,9 @@ const Chatbot = () => {
   
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeChatId, setActiveChatId] = useState(null);
-  const [nextChatId, setNextChatId] = useState(1);
+  const [nextChatId, setNextChatId] = useState(
+    Number(loadFromStorage(STORAGE_KEYS.ACTIVE_CHAT_ID)) + 1
+  );
   
   const messages = useSelector((state) => state.chat.messages);
   const dispatch = useDispatch();
@@ -157,7 +160,7 @@ const Chatbot = () => {
 
   // Load user data on component mount
   useEffect(() => {
-    const savedUser = loadFromStorage(STORAGE_KEYS.USER_DATA);
+    const savedUser = sessionStorage.getItem(STORAGE_KEYS.USER_DATA);
     if (savedUser) {
       setUser(savedUser);
     }
@@ -271,7 +274,9 @@ const Chatbot = () => {
 
   const handleSignOut = () => {
     setUser(null);
-    removeFromStorage(STORAGE_KEYS.USER_DATA);
+    sessionStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+    sessionStorage.removeItem(STORAGE_KEYS.USER_DATA);
+    localStorage.clear();
     navigate('/login');
   };
 

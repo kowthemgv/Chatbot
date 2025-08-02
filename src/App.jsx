@@ -4,12 +4,7 @@ import { store } from "./store";
 import Chatbot from './Chatbot';
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import Auth from "./Auth";
-
-
-const PrivateRoute = ({ children }) => {
-  const token = localStorage.getItem("token");
-  return token ? children : <Navigate to="/" />;
-};
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
@@ -17,8 +12,12 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Auth />} />
-          <Route path="/chatbot" element={<Chatbot />} />
-          <Route path="*" element={<Navigate to="/login" />} />
+          <Route path="/chatbot" element={
+            <ProtectedRoute>
+                <Chatbot />
+            </ProtectedRoute>
+            } />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
     </Provider>

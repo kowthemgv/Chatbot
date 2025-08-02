@@ -1,6 +1,27 @@
 [
-    {"username": "Yurekan", "password": "Sony123"},
-    {"username": "Kowthem", "password": "Sony123"},
-    {"username": "Raju", "password": "Sony123"},
-    {"username": "Yurekan", "password": "Sony123"}
+    {
+        "username": "Yurekan", 
+        "password": "Sony123", 
+        "authType": "mock"
+    },
+    {
+        "username": "Kowthem", 
+        "password": "Sony123",
+        "authType": "mock"
+    },
+    {
+        "username": "Raju", 
+        "password": "Sony123",
+        "authType": "mock"
+    },
+    {
+        "username": "Yurekan", 
+        "password": "Sony123",
+         "authType": "mock"
+    },
+    {
+        "username": "NzAwMDAxMDEwMQ==",
+        "password": "VG9tMTIz",
+        "authType": "api"
+    }
 ]
