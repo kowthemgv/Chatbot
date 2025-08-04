@@ -9,6 +9,7 @@ import "./Chatbot.css";
 import MessageBubble from "./components/MessageBubble";
 import ChatHeader from "./components/ChatHeader";
 import WelcomeMessage from "./components/WelcomeMessage";
+import { chatWithAtlas } from "./api/chatAPI";
 
 // Enhanced Predefined questions configuration with service types
 const PREDEFINED_QUESTIONS = {
@@ -82,6 +83,23 @@ const PREDEFINED_QUESTIONS = {
   }
 };
 
+// const ATLAS_API_CONFIG = {
+//   sharepoint: {
+//     endpoint: API_ENDPOINTS.ATLAS.SERVICES.SHAREPOINT.fullUrl
+//   },
+//   jira: {
+//     endpoint: API_ENDPOINTS.ATLAS.SERVICES.JIRA.fullUrl
+//   },
+//   confluence: {
+//     endpoint: API_ENDPOINTS.ATLAS.SERVICES.CONFLUENCE.fullUrl
+//   }
+// };
+
+// // AssistIQ API Configuration
+// const ASSISTIQ_API_CONFIG = {
+//   endpoint: API_ENDPOINTS.ASSISTIQ.MOCK_ENDPOINT
+// };
+
 // Local Storage Helper Functions
 const STORAGE_KEYS = {
   CHAT_HISTORY: 'assistiq_chat_history',
@@ -132,26 +150,24 @@ const ChatActions = ({ activeChatTitle, onDeleteChat }) => (
 const Chatbot = () => {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [user, setUser] = useState(null);
-  
+
   // Enhanced flow state for service selection
   const [currentFlow, setCurrentFlow] = useState({
     step: 'service', // service -> main -> sub -> prompt -> conversation
     selectedService: null,
     selectedMain: null,
-    selectedSub: null
+    selectedSub: null,
+    isAtlasFlow: false
   });
 
   const [chatHistory, setChatHistory] = useState([]);
-  
+
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeChatId, setActiveChatId] = useState(null);
-  const [nextChatId, setNextChatId] = useState(
-    Number(loadFromStorage(STORAGE_KEYS.ACTIVE_CHAT_ID)) + 1
-  );
-  
+  const [nextChatId, setNextChatId] = useState(Number(loadFromStorage(STORAGE_KEYS.ACTIVE_CHAT_ID)) + 1);
+
   const messages = useSelector((state) => state.chat.messages);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -172,16 +188,16 @@ const Chatbot = () => {
       const savedChatHistory = loadFromStorage(STORAGE_KEYS.CHAT_HISTORY, []);
       const savedActiveChatId = loadFromStorage(STORAGE_KEYS.ACTIVE_CHAT_ID);
       const savedNextChatId = loadFromStorage(STORAGE_KEYS.NEXT_CHAT_ID, 1);
-      
+
       setChatHistory(savedChatHistory);
       setNextChatId(savedNextChatId);
-      
+
       const chatIdFromUrl = searchParams.get("chatId");
       const targetChatId = chatIdFromUrl || savedActiveChatId;
-      
+
       if (targetChatId && savedChatHistory.find(chat => chat.id.toString() === targetChatId)) {
         setActiveChatId(targetChatId);
-        
+
         const savedMessages = loadFromStorage(`${STORAGE_KEYS.MESSAGES}${targetChatId}`, []);
         const savedFlowState = loadFromStorage(`${STORAGE_KEYS.FLOW_STATE}${targetChatId}`, {
           step: 'conversation',
@@ -189,17 +205,17 @@ const Chatbot = () => {
           selectedMain: null,
           selectedSub: null
         });
-        
+
         dispatch(loadMessages(savedMessages));
         setCurrentFlow(savedFlowState);
-        
+
         if (!chatIdFromUrl) {
           setSearchParams({ chatId: targetChatId });
         }
       } else {
         handleNewChat();
       }
-      
+
       setIsInitialized(true);
     };
 
@@ -282,7 +298,7 @@ const Chatbot = () => {
 
   const handleOptionClick = (option) => {
     const timestamp = Date.now();
-    
+
     dispatch(
       addMessage({
         text: option.title,
@@ -293,17 +309,20 @@ const Chatbot = () => {
 
     // Service Type Selection
     if (currentFlow.step === 'service') {
+      const isAtlas = option.id === 'atlas';
+
       setCurrentFlow({
         step: 'main',
         selectedService: option.id,
         selectedMain: null,
-        selectedSub: null
+        selectedSub: null,
+        isAtlasFlow: isAtlas
       });
 
       setTimeout(() => {
         const mainCategories = PREDEFINED_QUESTIONS.mainCategories[option.id];
         const serviceTitle = option.title;
-        
+
         dispatch(
           addMessage({
             text: `Great! You selected ${serviceTitle}. Now please choose a specific category:`,
@@ -318,47 +337,70 @@ const Chatbot = () => {
     }
     // Main Category Selection
     else if (currentFlow.step === 'main') {
-      const subCategories = PREDEFINED_QUESTIONS.subCategories[option.id];
-      
-      // Check if subcategories exist for this main category
-      if (subCategories && subCategories.length > 0) {
-        setCurrentFlow({
-          step: 'sub',
-          selectedService: currentFlow.selectedService,
-          selectedMain: option.id,
-          selectedSub: null
-        });
-
-        setTimeout(() => {
-          dispatch(
-            addMessage({
-              text: `Perfect! You selected ${option.title}. Now please choose a specific area:`,
-              user: false,
-              timestamp: Date.now(),
-              type: 'options',
-              options: subCategories,
-              isSubCategory: true
-            })
-          );
-        }, 800);
-      } else {
-        // No subcategories, go directly to conversation
+      if (currentFlow.isAtlasFlow) {
+        // For Atlas, go directly to conversation after main category selection
         setCurrentFlow({
           step: 'conversation',
           selectedService: currentFlow.selectedService,
           selectedMain: option.id,
-          selectedSub: null
+          selectedSub: null,
+          isAtlasFlow: true
         });
 
         setTimeout(() => {
           dispatch(
             addMessage({
-              text: `Perfect! You've selected ${option.title}. Please describe your specific question or issue in detail, and I'll help you with it.`,
+              text: `Perfect! You've selected ${option.title}. Please describe what you need help with, and I'll assist you using the ${option.title} service.`,
               user: false,
               timestamp: Date.now(),
             })
           );
         }, 800);
+      } else {
+        // For AssistIQ, check for subcategories
+        const subCategories = PREDEFINED_QUESTIONS.subCategories[option.id];
+
+        if (subCategories && subCategories.length > 0) {
+          setCurrentFlow({
+            step: 'sub',
+            selectedService: currentFlow.selectedService,
+            selectedMain: option.id,
+            selectedSub: null,
+            isAtlasFlow: false
+          });
+
+          setTimeout(() => {
+            dispatch(
+              addMessage({
+                text: `Perfect! You selected ${option.title}. Now please choose a specific area:`,
+                user: false,
+                timestamp: Date.now(),
+                type: 'options',
+                options: subCategories,
+                isSubCategory: true
+              })
+            );
+          }, 800);
+        } else {
+          // No subcategories for Atlas, go to conversation
+          setCurrentFlow({
+            step: 'conversation',
+            selectedService: currentFlow.selectedService,
+            selectedMain: option.id,
+            selectedSub: null,
+            isAtlasFlow: false
+          });
+
+          setTimeout(() => {
+            dispatch(
+              addMessage({
+                text: `Perfect! You've selected ${option.title}. Please describe your specific question or issue in detail, and I'll help you with it.`,
+                user: false,
+                timestamp: Date.now(),
+              })
+            );
+          }, 800);
+        }
       }
     }
     // Sub Category Selection
@@ -367,7 +409,8 @@ const Chatbot = () => {
         step: 'conversation',
         selectedService: currentFlow.selectedService,
         selectedMain: currentFlow.selectedMain,
-        selectedSub: option.id
+        selectedSub: option.id,
+        isAtlasFlow: false
       });
 
       setTimeout(() => {
@@ -393,6 +436,56 @@ const Chatbot = () => {
     }
   };
 
+  // // Enhanced API call functions
+  // const callAssistIQAPI = async (userInput, flowContext) => {
+  //   try {
+  //     const apiPayload = ApiHelpers.buildAssistIQPayload(
+  //       userInput,
+  //       flowContext,
+  //       user,
+  //       currentFlow
+  //     );
+
+  //     const response = await axios.post(ASSISTIQ_API_CONFIG.endpoint, apiPayload);
+  //     return response.data;
+  //   } catch (error) {
+  //     console.error('AssistIQ API Error:', error);
+  //     throw error;
+  //   }
+  // };
+
+  // const callAtlasAPI = async (userInput, flowContext) => {
+  //   try {
+  //     const selectedCategory = currentFlow.selectedMain;
+  //     const apiConfig = ATLAS_API_CONFIG[selectedCategory];
+
+  //     if (!apiConfig) {
+  //       throw new Error(`No API configuration found for ${selectedCategory}`);
+  //     }
+
+  //     const apiPayload = ApiHelpers.buildAtlasPayload(
+  //       userInput
+  //     );
+  //     // Make POST request to the selected Atlas service
+  //     const response = await axios.post(apiConfig.endpoint, apiPayload,
+  //       {
+  //         headers: {
+  //           "x-api-key": "sCzIT6PendarNRm-Fvs5p-Qdt9bMeRHNtLUk86jnYBI",
+  //           "Content-Type": "application/json",
+  //           "Authorization": `Bearer ${sessionStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`
+  //         }
+  //       }
+  //     );
+  //     console.log("sharepoint", response);
+  //     // Process and format the Atlas response
+  //     return ApiHelpers.formatResponse(response.data, 'atlas', selectedCategory);
+  //   } catch (error) {
+  //     console.error('Atlas API Error:', error);
+  //     throw error;
+  //   }
+  // };
+
+
   const handleSelectChat = (chatId) => {
     if (activeChatId) {
       saveToStorage(`${STORAGE_KEYS.MESSAGES}${activeChatId}`, messages);
@@ -401,7 +494,6 @@ const Chatbot = () => {
 
     setActiveChatId(chatId);
     setSearchParams({ chatId });
-    setIsSidebarOpen(false);
 
     const savedMessages = loadFromStorage(`${STORAGE_KEYS.MESSAGES}${chatId}`, []);
     const savedFlowState = loadFromStorage(`${STORAGE_KEYS.FLOW_STATE}${chatId}`, {
@@ -423,15 +515,14 @@ const Chatbot = () => {
       lastMessage: "Start a new conversation",
       timestamp: Date.now(),
     };
-    
+
     dispatch(clearMessages());
-    
+
     setChatHistory(prevHistory => [newChat, ...prevHistory]);
     setNextChatId(nextChatId + 1);
     setActiveChatId(newChatId);
     setSearchParams({ chatId: newChatId });
-    setIsSidebarOpen(false);
-    
+
     setCurrentFlow({
       step: 'service',
       selectedService: null,
@@ -443,12 +534,12 @@ const Chatbot = () => {
   const handleDeleteChat = (chatId) => {
     removeFromStorage(`${STORAGE_KEYS.MESSAGES}${chatId}`);
     removeFromStorage(`${STORAGE_KEYS.FLOW_STATE}${chatId}`);
-    
+
     const updatedChatHistory = chatHistory.filter(
       (chat) => chat.id.toString() !== chatId.toString()
     );
     setChatHistory(updatedChatHistory);
-    
+
     if (activeChatId === chatId.toString()) {
       if (updatedChatHistory.length > 0) {
         const newActiveChat = updatedChatHistory[0].id.toString();
@@ -459,23 +550,26 @@ const Chatbot = () => {
     }
   };
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
+  const normalizeAtlasResponse = (rawResponse) => {
+    const files = rawResponse["Reference files"] || rawResponse.files || {};
+    const message = rawResponse.body?.answer || rawResponse.message || "";
+    const suggestions = rawResponse.suggestions || [];
+    return { files, message, suggestions };
   };
 
   const handleSend = async () => {
     if (input.trim() !== "") {
       const timestamp = Date.now();
-      
+
       // Enhanced flow context with service information
       const flowContext = currentFlow.selectedService ? {
         service: currentFlow.selectedService,
         serviceTitle: PREDEFINED_QUESTIONS.serviceTypes.find(s => s.id === currentFlow.selectedService)?.title,
         mainCategory: currentFlow.selectedMain,
-        mainCategoryTitle: currentFlow.selectedMain ? 
+        mainCategoryTitle: currentFlow.selectedMain ?
           PREDEFINED_QUESTIONS.mainCategories[currentFlow.selectedService]?.find(c => c.id === currentFlow.selectedMain)?.title : null,
         subCategory: currentFlow.selectedSub,
-        subCategoryTitle: currentFlow.selectedSub ? 
+        subCategoryTitle: currentFlow.selectedSub ?
           PREDEFINED_QUESTIONS.subCategories[currentFlow.selectedMain]?.find(s => s.id === currentFlow.selectedSub)?.title : null
       } : null;
 
@@ -506,37 +600,57 @@ const Chatbot = () => {
 
       try {
         setIsTyping(true);
-        
-        // Enhanced API payload with service context
-        const apiPayload = {
-          message: input,
-          context: flowContext ? {
-            service: flowContext.serviceTitle,
-            category: flowContext.mainCategoryTitle,
-            subCategory: flowContext.subCategoryTitle,
-          } : null,
-          conversationFlow: currentFlow,
-          user: user,
-          serviceType: currentFlow.selectedService 
-        };
+        let responseData;
 
-        const { data } = await axios.post(
-          "https://run.mocky.io/v3/610f9d23-c4d1-4746-a28f-06401aeb89e0",
-          apiPayload
-        );
-        
+        // Route to appropriate API based on service type
+        if (currentFlow.isAtlasFlow) {
+          const rawResponse = await chatWithAtlas(
+            currentFlow,
+            input,
+            sessionStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)
+          );
+          responseData = normalizeAtlasResponse(rawResponse);
+        } else {
+          responseData = await chatWithAssist(input, flowContext);
+        }
+
+        // Enhanced API payload with service context
+        // const apiPayload = {
+        //   message: input,
+        //   context: flowContext ? {
+        //     service: flowContext.serviceTitle,
+        //     category: flowContext.mainCategoryTitle,
+        //     subCategory: flowContext.subCategoryTitle,
+        //   } : null,
+        //   conversationFlow: currentFlow,
+        //   user: user,
+        //   serviceType: currentFlow.selectedService
+        // };
+
+        // const { data } = await axios.post(
+        //   "https://run.mocky.io/v3/610f9d23-c4d1-4746-a28f-06401aeb89e0",
+        //   apiPayload
+        // );
+
+        console.log("response data", responseData);
+
         setTimeout(() => {
           dispatch(
             addMessage({
-              text: data,
+              text: responseData.message,
               user: false,
               timestamp: Date.now(),
+              atlasResponse: currentFlow.isAtlasFlow ? responseData : null,
+              isAtlasResponse: currentFlow.isAtlasFlow
             })
           );
           setIsTyping(false);
         }, 1000);
       } catch (error) {
         setIsTyping(false);
+        const errorMessage = currentFlow.isAtlasFlow
+          ? `Error connecting to ${currentFlow.selectedMain} service. Please try again.`
+          : "Error fetching response. Please try again.";
         dispatch(
           addMessage({
             text: "Error fetching response. Please try again.",
@@ -547,6 +661,65 @@ const Chatbot = () => {
       }
     }
   };
+
+  const handleSuggestionClick = async (suggestion) => {
+  // Add the suggestion as a user message
+  const messageData = {
+    text: suggestion,
+    user: true,
+    timestamp: Date.now(),
+  };
+
+  dispatch(addMessage(messageData));
+
+  // Update chat history if needed
+  if (activeChatId) {
+    setChatHistory((prevHistory) =>
+      prevHistory.map((chat) =>
+        chat.id.toString() === activeChatId
+          ? { ...chat, lastMessage: suggestion, timestamp: Date.now() }
+          : chat
+      )
+    );
+  }
+
+  // Trigger the API call for the suggestion
+  try {
+    setIsTyping(true);
+    const rawResponse = await chatWithAtlas(
+      currentFlow,
+      suggestion,
+      sessionStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)
+    );
+    
+    const responseData = normalizeAtlasResponse(rawResponse);
+
+    setTimeout(() => {
+      dispatch(
+        addMessage({
+          text: responseData.message || "Check the resources below:",
+          user: false,
+          timestamp: Date.now(),
+          atlasResponse: responseData,
+          isAtlasResponse: true
+        })
+      );
+      setIsTyping(false);
+    }, 1000);
+  } catch (error) {
+    setIsTyping(false);
+    console.error('Error handling suggestion:', error);
+    dispatch(
+      addMessage({
+        text: `Error getting information for: "${suggestion}". Please try again.`,
+        user: false,
+        timestamp: Date.now(),
+      })
+    );
+  }
+};
+
+  
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
@@ -571,8 +744,8 @@ const Chatbot = () => {
 
   return (
     <div className="chat-container">
-      <ChatHeader 
-        onNewChat={handleNewChat} 
+      <ChatHeader
+        onNewChat={handleNewChat}
         user={user}
         onSignIn={handleSignIn}
         onSignOut={handleSignOut}
@@ -583,25 +756,27 @@ const Chatbot = () => {
             activeChatTitle={activeChatTitle}
             onDeleteChat={() => handleDeleteChat(activeChatId)}
           />
-          
+
           <div className="chat-messages-container" ref={chatWindowRef}>
             {shouldShowWelcome && <WelcomeMessage />}
             {messages.map((msg, index) => (
-              <MessageBubble 
-                key={index} 
-                message={msg} 
+              <MessageBubble
+                key={index}
+                message={msg}
                 onOptionClick={handleOptionClick}
                 currentFlowStep={currentFlow.step}
+                onSuggestionClick={handleSuggestionClick}
                 selectedService={currentFlow.selectedService}
                 selectedMainCategory={currentFlow.selectedMain}
                 selectedSubCategory={currentFlow.selectedSub}
+                isAtlasFlow={currentFlow.isAtlasFlow}
               />
             ))}
             {isTyping && (
               <MessageBubble message={{ user: false }} isTyping={true} />
             )}
           </div>
-          
+
           {shouldShowInput && (
             <div className="chat-input-container">
               <div className="chat-input-wrapper">
@@ -609,7 +784,11 @@ const Chatbot = () => {
                   ref={inputRef}
                   value={input}
                   onChange={handleInputChange}
-                  placeholder="Type your message..."
+                  placeholder={
+                    currentFlow.isAtlasFlow
+                      ? `Ask about ${currentFlow.selectedMain}...`
+                      : "Type your message..."
+                  }
                   className="chat-input"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {

@@ -1,6 +1,7 @@
 // MessageBubble.js
 import React from 'react';
 import CheckIcon from '@mui/icons-material/Check';
+import AtlasResponseDisplay from './AtlasResponseDisplay';
 
 const MessageBubble = ({ 
   message, 
@@ -9,7 +10,9 @@ const MessageBubble = ({
   currentFlowStep,
   selectedService,
   selectedMainCategory,
-  selectedSubCategory 
+  selectedSubCategory,
+  isAtlasFlow,
+  onSuggestionClick
 }) => {
   const formatTime = (timestamp) => {
     return new Date(timestamp).toLocaleTimeString([], {
@@ -61,6 +64,17 @@ const MessageBubble = ({
       </div>
     );
   };
+
+  if (isAtlasFlow && message.atlasResponse) {
+    return (
+      <div className="message-bubble bot-message atlas-response">
+        <AtlasResponseDisplay 
+          responseData={message.atlasResponse}
+          onSuggestionClick={onSuggestionClick}
+        />
+      </div>
+    );
+  }
 
   const renderRegularOptions = (options, isSubCategory = false, isMainCategory = false) => {
     return (
@@ -177,7 +191,7 @@ const MessageBubble = ({
 
   if (isTyping) {
     return (
-      <div className="flex justify-start mb-4">
+      <div className="flex justify-start mb-6 mt-6">
         <div className="message-bubble bot-message">
           <TypingIndicator />
         </div>
@@ -187,7 +201,7 @@ const MessageBubble = ({
 
   if (message.user) {
     return (
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-end mb-6 mt-6">
         <div className="message-bubble user-message">
           {message.text}
           {message.timestamp && (
