@@ -1,5 +1,6 @@
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import FilePresentIcon from '@mui/icons-material/FilePresent';
+import SourceOutlinedIcon from '@mui/icons-material/SourceOutlined';
 
 const AtlasResponseDisplay = ({ responseData, onSuggestionClick }) => {
   const { files, message, suggestions } = responseData;
@@ -31,41 +32,45 @@ const AtlasResponseDisplay = ({ responseData, onSuggestionClick }) => {
 
   return (
     <div className="space-y-4">
-      {hasAnswer && (
+      {(hasAnswer || hasFiles) && (
         <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400">
           <div className="flex items-center gap-2 mb-2">
             <ChatBubbleOutlineIcon className="w-4 h-4 text-blue-600" />
             <span className="font-medium text-blue-900">Answer</span>
           </div>
-          <p className="text-gray-800 whitespace-pre-wrap">{message}</p>
+
+          {/* Message content */}
+          {hasAnswer && (
+            <p className="text-gray-800 whitespace-pre-wrap mb-4">{message}</p>
+          )}
+
+          {/* Files section (inline with message) */}
+          {hasFiles && (
+            <div className="space-y-2 mt-2">
+              <div className="flex items-center gap-2 mb-2">
+                <SourceOutlinedIcon className="w-4 h-4 text-blue-400" />
+                <span className="font-medium text-blue-900">Source</span>
+              </div>
+              {Object.entries(files).map(([fileName, link], index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <FilePresentIcon className="w-4 h-4 text-gray-500" />
+                  {link ? (
+                    <button
+                      onClick={() => handleFileClick(fileName, link)}
+                      className="text-blue-600 hover:text-blue-800 underline text-sm"
+                    >
+                      {fileName}
+                    </button>
+                  ) : (
+                    <span className="text-gray-700 text-sm">{fileName}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {hasFiles && (
-        <div className="bg-green-50 p-4 rounded-lg border-l-4 border-green-400">
-          <div className="flex items-center gap-2 mb-3">
-            <FilePresentIcon className="w-4 h-4 text-green-600" />
-            <span className="font-medium text-green-900">Files</span>
-          </div>
-          <div className="space-y-2">
-            {Object.entries(files).map(([fileName, link], index) => (
-              <div key={index} className="flex items-center gap-2">
-                <FilePresentIcon className="w-4 h-4 text-gray-500" />
-                {link ? (
-                  <button
-                    onClick={() => handleFileClick(fileName, link)}
-                    className="text-blue-600 hover:text-blue-800 underline text-sm"
-                  >
-                    {fileName}
-                  </button>
-                ) : (
-                  <span className="text-gray-700 text-sm">{fileName}</span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {!hasAnswer && (hasFiles || hasSuggestions) && (
         <div className="bg-yellow-50 p-3 rounded-lg border-l-4 border-yellow-400">

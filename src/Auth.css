@@ -1,21 +1,44 @@
-/* Complete Auth.css - Professional UI with all styles */
-
-/* Global styling */
 * {
   box-sizing: border-box;
   font-family: 'Segoe UI', 'Roboto', 'Oxygen', sans-serif;
 }
 
+/* body{
+  background-image: url("https://spark-sony-gisc.azurewebsites.net/images/assistiq.png");
+  background-repeat: no-repeat;
+  background-size: cover;
+} */
+
 .auth-container {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7eb 100%);
+  /* filter: blur(8px); */
+  /* background: linear-gradient(135deg, #f5f7fa 0%, #e4e7eb 100%); */
   padding: 20px;
+  overflow: hidden;
+}
+
+.auth-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-image: url("https://spark-sony-gisc.azurewebsites.net/images/assistiq.png");
+  background-repeat: no-repeat;
+  background-size: cover;
+  z-index: 0;
+  filter: blur(4px);
+  pointer-events: none;
 }
 
 .form-container {
+  position: relative;
+  z-index: 1;
   width: 400px;
   background-color: white;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
@@ -77,7 +100,7 @@ input:focus {
   background-color: white;
 }
 
-input:focus + label {
+input:focus+label {
   color: #2563eb;
 }
 
@@ -93,8 +116,8 @@ label {
   font-size: 16px;
 }
 
-input:focus + label,
-input:not(:placeholder-shown) + label {
+input:focus+label,
+input:not(:placeholder-shown)+label {
   top: 0;
   transform: translateY(-50%);
   background-color: white;
@@ -242,6 +265,7 @@ input::placeholder {
     opacity: 0;
     transform: translateY(30px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -253,17 +277,17 @@ input::placeholder {
   .auth-container {
     padding: 10px;
   }
-  
+
   .form-container {
     width: 100%;
     max-width: 380px;
     padding: 30px 20px;
   }
-  
+
   .auth-header h2 {
     font-size: 24px;
   }
-  
+
   input {
     font-size: 16px;
   }

@@ -12,9 +12,11 @@ export default function ChatHeader({ onNewChat, user, onSignIn, onSignOut }) {
     }
     return (
         <div className="chat-header flex justify-between items-center p-4 bg-white border-b shadow-sm">
-            <div className="flex items-center gap-4">
-                {/* <img src="image.png" alt="Logo" className="h-10 w-10" /> */}
+            {/* <div className="flex items-center gap-4">
                 <h2 className="text-xl font-semibold text-gray-800">✨Spark AI</h2>
+            </div> */}
+            <div className="justify-center">
+                <img src="spark.png" alt="Logo" className="h-20 w-70" />
             </div>
             <div className="flex items-center gap-3">
                 <button
