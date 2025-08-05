@@ -215,7 +215,7 @@ const MessageBubble = ({
   return (
     <div className="flex justify-start mb-4">
       <div className="flex flex-col max-w-[90%]">
-        {renderFlowBreadcrumb()}
+        {/* {renderFlowBreadcrumb()} */}
         <div className={`message-bubble bot-message ${message.type === 'options' ? 'options-message' : ''}`}>
           <div className="options-message-text">{message.text}</div>
           

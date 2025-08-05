@@ -28,7 +28,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background-image: url("https://spark-sony-gisc.azurewebsites.net/images/assistiq.png");
+  background-image: url("/auth.png");
   background-repeat: no-repeat;
   background-size: cover;
   z-index: 0;

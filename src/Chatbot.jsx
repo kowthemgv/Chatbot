@@ -3,25 +3,26 @@ import { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import SendIcon from "@mui/icons-material/Send";
 import { addMessage, clearMessages, loadMessages } from "./store";
-import axios from "axios";
+import AddIcon from "@mui/icons-material/Add";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import "./Chatbot.css";
 import MessageBubble from "./components/MessageBubble";
 import ChatHeader from "./components/ChatHeader";
 import WelcomeMessage from "./components/WelcomeMessage";
-import { chatWithAtlas } from "./api/chatAPI";
+import { chatWithAtlas } from "./api/AtlasAPI";
+import { chatWithAssistIQ } from "./api/AssistIQAPI";
 
 // Enhanced Predefined questions configuration with service types
 const PREDEFINED_QUESTIONS = {
   serviceTypes: [
     {
       id: 'assistiq',
-      title: 'AssistIQ',
+      title: 'Virtual Assistant',
       description: 'SAP business solutions and system queries',
     },
     {
       id: 'atlas',
-      title: 'Atlas',
+      title: 'Artifact Management',
       description: 'Collaboration and project management tools',
     }
   ],
@@ -137,13 +138,20 @@ const removeFromStorage = (key) => {
   }
 };
 
-const ChatActions = ({ activeChatTitle, onDeleteChat }) => (
+const ChatActions = ({ activeChatTitle, onNewChat }) => (
   <div className="chat-actions flex justify-between items-center p-3 border-b">
     <div className="flex items-center">
       <h3 className="font-medium text-gray-800">
         {activeChatTitle || "New Conversation"}
       </h3>
     </div>
+    <button
+        onClick={onNewChat}
+        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-2"
+      >
+        <AddIcon fontSize="small" />
+        New Chat
+      </button>
   </div>
 );
 
@@ -562,22 +570,22 @@ const Chatbot = () => {
       const timestamp = Date.now();
 
       // Enhanced flow context with service information
-      const flowContext = currentFlow.selectedService ? {
-        service: currentFlow.selectedService,
-        serviceTitle: PREDEFINED_QUESTIONS.serviceTypes.find(s => s.id === currentFlow.selectedService)?.title,
-        mainCategory: currentFlow.selectedMain,
-        mainCategoryTitle: currentFlow.selectedMain ?
-          PREDEFINED_QUESTIONS.mainCategories[currentFlow.selectedService]?.find(c => c.id === currentFlow.selectedMain)?.title : null,
-        subCategory: currentFlow.selectedSub,
-        subCategoryTitle: currentFlow.selectedSub ?
-          PREDEFINED_QUESTIONS.subCategories[currentFlow.selectedMain]?.find(s => s.id === currentFlow.selectedSub)?.title : null
-      } : null;
+    //   const flowContext = currentFlow.selectedService ? {
+    //     service: currentFlow.selectedService,
+    //     serviceTitle: PREDEFINED_QUESTIONS.serviceTypes.find(s => s.id === currentFlow.selectedService)?.title,
+    //     mainCategory: currentFlow.selectedMain,
+    //     mainCategoryTitle: currentFlow.selectedMain ?
+    //       PREDEFINED_QUESTIONS.mainCategories[currentFlow.selectedService]?.find(c => c.id === currentFlow.selectedMain)?.title : null,
+    //     subCategory: currentFlow.selectedSub,
+    //     subCategoryTitle: currentFlow.selectedSub ?
+    //       PREDEFINED_QUESTIONS.subCategories[currentFlow.selectedMain]?.find(s => s.id === currentFlow.selectedSub)?.title : null
+    //   } : null;
 
       const messageData = {
         text: input,
         user: true,
         timestamp: timestamp,
-        flowContext: flowContext
+        // flowContext: flowContext
       };
 
       dispatch(addMessage(messageData));
@@ -611,7 +619,7 @@ const Chatbot = () => {
           );
           responseData = normalizeAtlasResponse(rawResponse);
         } else {
-          responseData = await chatWithAssist(input, flowContext);
+          responseData = await chatWithAssistIQ(currentFlow, input, user);
         }
 
         // Enhanced API payload with service context
@@ -745,7 +753,6 @@ const Chatbot = () => {
   return (
     <div className="chat-container">
       <ChatHeader
-        onNewChat={handleNewChat}
         user={user}
         onSignIn={handleSignIn}
         onSignOut={handleSignOut}
@@ -754,6 +761,7 @@ const Chatbot = () => {
         <div className="flex-1 flex flex-col h-full relative">
           <ChatActions
             activeChatTitle={activeChatTitle}
+            onNewChat={handleNewChat}
             onDeleteChat={() => handleDeleteChat(activeChatId)}
           />
 
@@ -778,34 +786,31 @@ const Chatbot = () => {
           </div>
 
           {shouldShowInput && (
-            <div className="chat-input-container">
-              <div className="chat-input-wrapper">
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={handleInputChange}
-                  placeholder={
-                    currentFlow.isAtlasFlow
-                      ? `Ask about ${currentFlow.selectedMain}...`
-                      : "Type your message..."
-                  }
-                  className="chat-input"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                />
-                <button
-                  className="send-button"
-                  onClick={handleSend}
-                  disabled={input.trim() === ""}
-                >
-                  <SendIcon fontSize="small" />
-                </button>
-              </div>
+            <div className="chat-input-container fixed bottom-6 left-1/2 transform -translate-x-1/2 w-full max-w-3xl px-4 z-50">
+                <div className="chat-input-wrapper shadow-md rounded-full">
+                    <textarea
+                    ref={inputRef}
+                    value={input}
+                    onChange={handleInputChange}
+                    placeholder={"Type your message..."}
+                    className="chat-input"
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                        }
+                    }}
+                    />
+                    <button
+                    className="send-button"
+                    onClick={handleSend}
+                    disabled={input.trim() === ""}
+                    >
+                    <SendIcon fontSize="small" />
+                    </button>
+                </div>
             </div>
+
           )}
         </div>
       </div>

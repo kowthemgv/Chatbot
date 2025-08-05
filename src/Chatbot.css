@@ -102,8 +102,10 @@
   flex: 1;
   overflow-y: auto;
   padding: 20px;
+  padding-bottom: 130px; /* add extra space for floating input */
   position: relative;
 }
+
 
 /* Welcome Message Styling */
 .welcome-message-container {
@@ -429,17 +431,16 @@
 }
 
 .chat-input-container {
-  padding: 1rem;
-  background-color: white;
-  border-top: 1px solid #e9ecef;
+  z-index: 50; /* ensure it floats above content */
 }
 
 .chat-input-wrapper {
   display: flex;
   background-color: #f1f3f4;
-  border-radius: 1.5rem;
-  padding: 0.5rem 1rem;
-  align-items: flex-end;
+  border-radius: 25px; /* full rounded bubble */
+  padding: 1rem 2rem;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* soft shadow */
 }
 
 .chat-input {
@@ -452,12 +453,14 @@
   max-height: 120px;
   min-height: 24px;
   font-size: 0.9rem;
+  font-family: inherit;
 }
 
 .chat-input::placeholder {
   color: #9ca3af;
   font-style: italic;
 }
+
 
 .send-button {
   width: 40px;
@@ -691,3 +694,37 @@
 .clickable-option.disabled {
   transition: all 0.3s ease;
 }
+
+/* Global CSS or module */
+
+@keyframes chatTyping {
+  from {
+    width: 0;
+  }
+  to {
+    width: 51ch; /* <- Adjust to your text length */
+  }
+}
+
+@keyframes blinkCaret {
+  50% {
+    border-color: transparent;
+  }
+}
+
+@keyframes blinkFade {
+  0%, 100% { border-color: transparent; }
+  50% { border-color: black; }
+}
+
+.typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid black;
+  animation:
+    chatTyping 1.5s steps(51, end) forwards,
+    blinkFade 1s infinite;
+  font-family: monospace;
+  width: 0;
+}
+
