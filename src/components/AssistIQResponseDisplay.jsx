@@ -1,8 +1,8 @@
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 
 const AssistIQResponseDisplay = ({ responseData }) => {
-
-  const hasAnswer = responseData && responseData.trim().length > 0;
+  console.log(responseData);
+  const hasAnswer = responseData && responseData.result.trim().length > 0;
 
   // for empty response
   if (!hasAnswer) {
@@ -24,7 +24,7 @@ const AssistIQResponseDisplay = ({ responseData }) => {
 
           {/* Message content */}
           {hasAnswer && (
-            <p className="text-gray-800 whitespace-pre-wrap mb-4">{message}</p>
+            <p className="text-gray-800 whitespace-pre-wrap mb-4">{responseData.result}</p>
           )}
         </div>
       )}

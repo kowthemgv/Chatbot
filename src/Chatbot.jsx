@@ -60,7 +60,7 @@ const PREDEFINED_QUESTIONS = {
   subCategories: {
     sap_systems: [
       {
-        id: 'mozart',
+        id: 'Mozart',
         title: 'Mozart',
         description: 'Queries related to Mozart'
       },
