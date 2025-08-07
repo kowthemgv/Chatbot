@@ -7,13 +7,10 @@ export default function ChatHeader({ user, onSignIn, onSignOut }) {
     console.log("User type:", typeof user);
     let parsedUser = typeof user === 'string' ? JSON.parse(user) : user;
     console.log("Parsed user name:", parsedUser.name);
-    if (user) {
-        console.log("User name:", user.name);
-    }
     return (
-        <div className="chat-header flex items-center p-4 bg-white border-b shadow-sm">
+        <div className="w-[1200px] mx-auto mt-4 chat-header flex items-center p-4 border-b shadow-sm bg-gray-500 rounded-md bg-clip-padding backdrop-filter backdrop-blur-sm bg-opacity-20 border border-gray-100">
             <div className="basis-1/4 flex justify-start items-center">
-                <img src="spark.png" alt="Spark AI Logo" className="h-20 w-auto" />
+                <img src="spark.png" alt="Spark AI Logo" className="h-10 w-auto" />
             </div>
 
             <div className="basis-2/4 flex justify-center items-center">

@@ -2,6 +2,7 @@
 import React from 'react';
 import CheckIcon from '@mui/icons-material/Check';
 import AtlasResponseDisplay from './AtlasResponseDisplay';
+import AssistIQResponseDisplay from './AssistIQResponseDisplay';
 
 const MessageBubble = ({ 
   message, 
@@ -65,12 +66,20 @@ const MessageBubble = ({
     );
   };
 
-  if (isAtlasFlow && message.atlasResponse) {
+  if (isAtlasFlow && message.response != null) {
     return (
       <div className="message-bubble bot-message atlas-response">
         <AtlasResponseDisplay 
-          responseData={message.atlasResponse}
+          responseData={message.reponse}
           onSuggestionClick={onSuggestionClick}
+        />
+      </div>
+    );
+  }else if(!isAtlasFlow && message.response != null){
+    return (
+      <div className="message-bubble bot-message atlas-response">
+        <AssistIQResponseDisplay 
+          responseData={message.response}
         />
       </div>
     );

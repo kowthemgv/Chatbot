@@ -139,7 +139,7 @@ const removeFromStorage = (key) => {
 };
 
 const ChatActions = ({ activeChatTitle, onNewChat }) => (
-  <div className="chat-actions flex justify-between items-center p-3 border-b">
+  <div className="w-[1200px] mx-auto my-4 flex justify-between items-center p-3 border-b">
     <div className="flex items-center">
       <h3 className="font-medium text-gray-800">
         {activeChatTitle || "New Conversation"}
@@ -648,7 +648,7 @@ const Chatbot = () => {
               text: responseData.message,
               user: false,
               timestamp: Date.now(),
-              atlasResponse: currentFlow.isAtlasFlow ? responseData : null,
+              response: responseData || null,
               isAtlasResponse: currentFlow.isAtlasFlow
             })
           );
@@ -751,7 +751,7 @@ const Chatbot = () => {
   }
 
   return (
-    <div className="chat-container">
+    <div className="chat-container bg-gradient-to-br from-sky-100 to-cyan-50">
       <ChatHeader
         user={user}
         onSignIn={handleSignIn}

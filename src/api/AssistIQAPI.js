@@ -1,12 +1,17 @@
-const API_KEY = "Y5POYE0i052bwKEnA1Oul7KFVd2l1Zhn8pFK0iux";
+import axios from "axios";
 
 export const chatWithAssistIQ = async (flowState, question, userData) => {
     
     const API_URL = "http://assitiq-alb-1555551784.us-east-1.elb.amazonaws.com/query";
+
+    console.log(userData)
  
     try{
         const response = await axios.post(
             API_URL,
+            {
+                withCredentials: false
+            },
             {
                 system: flowState.selectedMain,
                 sub_system: flowState.selectedSub,
@@ -15,16 +20,13 @@ export const chatWithAssistIQ = async (flowState, question, userData) => {
             },
             {
                 headers: {
-                    "x-api-key": API_KEY,
                     "Content-Type": "application/json",
                 }
             }
         );
  
         return {
-            files: response.data["Reference files"],
-            message: response.data.body.answer,
-            suggestions: response.data.suggestions
+            result: response.response.summary
         }
  
     }catch(error){
