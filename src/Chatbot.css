@@ -400,7 +400,7 @@
 }
 
 .message-bubble {
-  max-width: 80%;
+  max-width: 60%;
   padding: 12px 16px;
   border-radius: 18px;
   margin-bottom: 4px;
@@ -410,14 +410,14 @@
 }
 
 .user-message {
-  background-color: #1e88e5;
-  color: white;
+  background-color: #7fd6f3;
+  color: rgb(35, 33, 33);
   border-bottom-right-radius: 0.25rem;
   align-self: flex-end;
 }
 
 .bot-message {
-  background-color: #f1f3f4;
+  background-color: #ffffff;
   color: #333;
   border-bottom-left-radius: 0.25rem;
   align-self: flex-start;
@@ -726,5 +726,12 @@
     blinkFade 1s infinite;
   font-family: monospace;
   width: 0;
+}
+
+@media (max-width: 640px) {
+  .typewriter {
+    white-space: normal;
+    width: auto;
+  }
 }
 

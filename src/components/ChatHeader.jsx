@@ -1,4 +1,3 @@
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LogoutIcon from "@mui/icons-material/Logout";
 import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined';
 
@@ -8,14 +7,14 @@ export default function ChatHeader({ user, onSignIn, onSignOut }) {
     let parsedUser = typeof user === 'string' ? JSON.parse(user) : user;
     console.log("Parsed user name:", parsedUser.name);
     return (
-        <div className="w-[1200px] mx-auto mt-4 chat-header flex items-center p-4 border-b shadow-sm bg-gray-500 rounded-md bg-clip-padding backdrop-filter backdrop-blur-sm bg-opacity-20 border border-gray-100">
+        <div className="chat-header flex flex-col xl:flex-row gap-4 items-center p-4 border-b shadow-sm bg-gray-500 rounded-md bg-clip-padding backdrop-filter backdrop-blur-sm bg-opacity-20 border border-gray-100">
             <div className="basis-1/4 flex justify-start items-center">
                 <img src="spark.png" alt="Spark AI Logo" className="h-10 w-auto" />
             </div>
 
             <div className="basis-2/4 flex justify-center items-center">
-                <h2 className="typewriter text-xl font-semibold text-gray-700">
-                    <span className="text-yellow-500 font-bold text-xl">S</span>ony GISC <span className="text-yellow-500 font-bold text-xl">P</span>latform For <span className="text-yellow-500 font-bold text-xl">A</span>I <span className="text-yellow-500 font-bold text-xl">R</span>ealization & <span className="text-yellow-500 font-bold text-xl">K</span>nowledge
+                <h2 className="typewriter text-sm sm:text-lg lg:text-xl font-semibold text-gray-700 break-words text-center">
+                    <span className="text-yellow-500 font-bold text-sm sm:text-lg lg:text-xl">S</span>ony GISC <span className="text-yellow-500 font-bold text-sm sm:text-lg lg:text-xl">P</span>latform For <span className="text-yellow-500 font-bold text-sm sm:text-lg lg:text-xl">A</span>I <span className="text-yellow-500 font-bold text-sm sm:text-lg lg:text-xl">R</span>ealization & <span className="text-yellow-500 font-bold text-sm sm:text-lg lg:text-xl">K</span>nowledge
                 </h2>
             </div>
 

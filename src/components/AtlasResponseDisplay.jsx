@@ -3,6 +3,7 @@ import FilePresentIcon from '@mui/icons-material/FilePresent';
 import SourceOutlinedIcon from '@mui/icons-material/SourceOutlined';
 
 const AtlasResponseDisplay = ({ responseData, onSuggestionClick }) => {
+  console.log(responseData);
   const { files, message, suggestions } = responseData;
 
   const handleFileClick = (fileName, link) => {
@@ -57,7 +58,7 @@ const AtlasResponseDisplay = ({ responseData, onSuggestionClick }) => {
                   {link ? (
                     <button
                       onClick={() => handleFileClick(fileName, link)}
-                      className="text-blue-600 hover:text-blue-800 underline text-sm"
+                      className="text-blue-600 hover:text-blue-800 underline text-sm break-all"
                     >
                       {fileName}
                     </button>
@@ -94,7 +95,7 @@ const AtlasResponseDisplay = ({ responseData, onSuggestionClick }) => {
               <button
                 key={index}
                 onClick={() => handleSuggestionClick(suggestion)}
-                className="block w-full text-left p-2 bg-white rounded border hover:bg-purple-100 text-sm text-gray-800 transition-colors"
+                className="block w-3/4 text-left p-2 bg-white rounded border hover:bg-purple-100 text-sm text-gray-800 transition-colors"
                 title="Click to copy to input field"
               >
                 {suggestion}

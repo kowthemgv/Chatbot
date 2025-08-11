@@ -139,10 +139,10 @@ const removeFromStorage = (key) => {
 };
 
 const ChatActions = ({ activeChatTitle, onNewChat }) => (
-  <div className="w-[1200px] mx-auto my-4 flex justify-between items-center p-3 border-b">
+  <div className="my-4 flex justify-between items-center p-3 border-b">
     <div className="flex items-center">
       <h3 className="font-medium text-gray-800">
-        {activeChatTitle || "New Conversation"}
+        {/* {activeChatTitle || "New Conversation"} */}
       </h3>
     </div>
     <button
@@ -708,8 +708,8 @@ const Chatbot = () => {
           text: responseData.message || "Check the resources below:",
           user: false,
           timestamp: Date.now(),
-          atlasResponse: responseData,
-          isAtlasResponse: true
+          response: responseData || null,
+          isAtlasResponse: currentFlow.isAtlasFlow
         })
       );
       setIsTyping(false);
@@ -751,7 +751,7 @@ const Chatbot = () => {
   }
 
   return (
-    <div className="chat-container bg-gradient-to-br from-sky-100 to-cyan-50">
+    <div className="chat-container relative bg-gradient-to-br from-sky-100 to-cyan-50">
       <ChatHeader
         user={user}
         onSignIn={handleSignIn}
@@ -786,7 +786,7 @@ const Chatbot = () => {
           </div>
 
           {shouldShowInput && (
-            <div className="chat-input-container fixed bottom-6 left-1/2 transform -translate-x-1/2 w-full max-w-3xl px-4 z-50">
+            <div className="chat-input-container absolute bottom-6 left-1/2 transform -translate-x-1/2 w-full max-w-3xl px-4 z-50">
                 <div className="chat-input-wrapper shadow-md rounded-full">
                     <textarea
                     ref={inputRef}

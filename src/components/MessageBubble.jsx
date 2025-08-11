@@ -70,14 +70,14 @@ const MessageBubble = ({
     return (
       <div className="message-bubble bot-message atlas-response">
         <AtlasResponseDisplay 
-          responseData={message.reponse}
+          responseData={message.response}
           onSuggestionClick={onSuggestionClick}
         />
       </div>
     );
   }else if(!isAtlasFlow && message.response != null){
     return (
-      <div className="message-bubble bot-message atlas-response">
+      <div className="message-bubble bot-message assist-response">
         <AssistIQResponseDisplay 
           responseData={message.response}
         />
