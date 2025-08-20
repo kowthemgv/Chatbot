@@ -65,7 +65,7 @@ const PREDEFINED_QUESTIONS = {
         description: 'Queries related to Mozart'
       },
       {
-        id: 'metro',
+        id: 'Metro',
         title: 'Metro',
         description: 'Queries related to Metro'
       }
