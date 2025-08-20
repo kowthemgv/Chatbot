@@ -10,7 +10,7 @@ import MessageBubble from "./components/MessageBubble";
 import ChatHeader from "./components/ChatHeader";
 import WelcomeMessage from "./components/WelcomeMessage";
 import { chatWithAtlas } from "./api/AtlasAPI";
-import { chatWithAssistIQ } from "./api/AssistIQAPI";
+import { chatWithAssistIQ, parseInput } from "./api/AssistIQAPI";
 
 // Enhanced Predefined questions configuration with service types
 const PREDEFINED_QUESTIONS = {
@@ -566,6 +566,9 @@ const Chatbot = () => {
   };
 
   const handleSend = async () => {
+
+    inputRef.current.style.height = "auto"; // Reset height before measuring
+
     if (input.trim() !== "") {
       const timestamp = Date.now();
 
@@ -612,48 +615,46 @@ const Chatbot = () => {
 
         // Route to appropriate API based on service type
         if (currentFlow.isAtlasFlow) {
-          const rawResponse = await chatWithAtlas(
-            currentFlow,
-            input,
-            sessionStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)
-          );
-          responseData = normalizeAtlasResponse(rawResponse);
+            const rawResponse = await chatWithAtlas(
+                currentFlow,
+                input,
+                sessionStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)
+            );
+            responseData = normalizeAtlasResponse(rawResponse);
+            setTimeout(() => {
+                dispatch(
+                    addMessage({
+                    text: responseData.message,
+                    user: false,
+                    timestamp: Date.now(),
+                    response: responseData || null,
+                    isAtlasResponse: currentFlow.isAtlasFlow
+                    })
+                );
+                setIsTyping(false);
+            }, 1000);
+
         } else {
-          responseData = await chatWithAssistIQ(currentFlow, input, user);
+          const dataArray = parseInput(input);
+          for (let i=1; i<dataArray.length; i++) {
+            responseData = await chatWithAssistIQ(currentFlow, dataArray[i], user);
+            setTimeout(() => {
+                dispatch(
+                    addMessage({
+                    text: responseData.message,
+                    user: false,
+                    timestamp: Date.now(),
+                    response: responseData || null,
+                    isAtlasResponse: currentFlow.isAtlasFlow
+                    })
+                );
+            }, 1000);
+          }
+          setIsTyping(false);
         }
-
-        // Enhanced API payload with service context
-        // const apiPayload = {
-        //   message: input,
-        //   context: flowContext ? {
-        //     service: flowContext.serviceTitle,
-        //     category: flowContext.mainCategoryTitle,
-        //     subCategory: flowContext.subCategoryTitle,
-        //   } : null,
-        //   conversationFlow: currentFlow,
-        //   user: user,
-        //   serviceType: currentFlow.selectedService
-        // };
-
-        // const { data } = await axios.post(
-        //   "https://run.mocky.io/v3/610f9d23-c4d1-4746-a28f-06401aeb89e0",
-        //   apiPayload
-        // );
 
         console.log("response data", responseData);
 
-        setTimeout(() => {
-          dispatch(
-            addMessage({
-              text: responseData.message,
-              user: false,
-              timestamp: Date.now(),
-              response: responseData || null,
-              isAtlasResponse: currentFlow.isAtlasFlow
-            })
-          );
-          setIsTyping(false);
-        }, 1000);
       } catch (error) {
         setIsTyping(false);
         const errorMessage = currentFlow.isAtlasFlow
@@ -800,6 +801,7 @@ const Chatbot = () => {
                         handleSend();
                         }
                     }}
+                    disabled={isTyping}
                     />
                     <button
                     className="send-button"
