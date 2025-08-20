@@ -75,9 +75,4 @@ const AssistIQResponseDisplay = ({ responseData }) => {
   );
 };
  
-<<<<<<< HEAD
 export default AssistIQResponseDisplay;
- 
-=======
-export default AssistIQResponseDisplay;
->>>>>>> a1546060cfa8271b87f3083aa1d8ccc6c8299d42
