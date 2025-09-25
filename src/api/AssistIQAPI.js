@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export const chatWithAssistIQ = async (flowState, question, userData) => {
+export const chatWithAssistIQ = async (flowState, question, userData,conversationId) => {
     
     const API_URL = "http://assitiq-alb-1555551784.us-east-1.elb.amazonaws.com/query";
     let parsedUser = typeof userData === 'string' ? JSON.parse(userData) : user;
@@ -14,7 +14,8 @@ export const chatWithAssistIQ = async (flowState, question, userData) => {
                 system: flowState.selectedMain,
                 sub_system: flowState.selectedSub,
                 query: question,
-                user_id: parsedUser.name
+                user_id: parsedUser.name,
+                conversation_id: conversationId ?? null
             },
             {
                 headers: {
@@ -24,7 +25,8 @@ export const chatWithAssistIQ = async (flowState, question, userData) => {
         );
         console.log("Atlasrespone",response);
         return {
-            result: response.data.response.summary
+            result: response.data.response.summary,
+            
         }
  
     }catch(error){

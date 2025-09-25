@@ -146,12 +146,12 @@ const ChatActions = ({ activeChatTitle, onNewChat }) => (
       </h3>
     </div>
     <button
-        onClick={onNewChat}
-        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-2"
-      >
-        <AddIcon fontSize="small" />
-        New Chat
-      </button>
+      onClick={onNewChat}
+      className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-2"
+    >
+      <AddIcon fontSize="small" />
+      New Chat
+    </button>
   </div>
 );
 
@@ -171,7 +171,7 @@ const Chatbot = () => {
   });
 
   const [chatHistory, setChatHistory] = useState([]);
-
+  const [conversationId, setConversationId] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeChatId, setActiveChatId] = useState(null);
   const [nextChatId, setNextChatId] = useState(Number(loadFromStorage(STORAGE_KEYS.ACTIVE_CHAT_ID)) + 1);
@@ -181,6 +181,22 @@ const Chatbot = () => {
   const navigate = useNavigate();
   const chatWindowRef = useRef(null);
   const inputRef = useRef(null);
+
+
+  // Save when it changes
+  useEffect(() => {
+    if (conversationId) {
+      sessionStorage.setItem('assistiq_conversation_id', conversationId);
+    }
+  }, [conversationId]);
+
+  // Load on mount
+  useEffect(() => {
+    const savedConvId = sessionStorage.getItem('assistiq_conversation_id');
+    if (savedConvId) {
+      setConversationId(savedConvId);
+    }
+  }, []);
 
   // Load user data on component mount
   useEffect(() => {
@@ -478,7 +494,7 @@ const Chatbot = () => {
   //     const response = await axios.post(apiConfig.endpoint, apiPayload,
   //       {
   //         headers: {
-  //           "x-api-key": "sCzIT6PendarNRm-Fvs5p-Qdt9bMeRHNtLUk86jnYBI",
+  //           "x-api-key": "",
   //           "Content-Type": "application/json",
   //           "Authorization": `Bearer ${sessionStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`
   //         }
@@ -494,6 +510,9 @@ const Chatbot = () => {
   // };
 
 
+  // Add a helper for conversationId storage per chat
+  const getConversationIdKey = (chatId) => `assistiq_conversation_id_${chatId}`;
+
   const handleSelectChat = (chatId) => {
     if (activeChatId) {
       saveToStorage(`${STORAGE_KEYS.MESSAGES}${activeChatId}`, messages);
@@ -502,6 +521,10 @@ const Chatbot = () => {
 
     setActiveChatId(chatId);
     setSearchParams({ chatId });
+
+    // Restore conversationId for this chat
+    const savedConversationId = sessionStorage.getItem(getConversationIdKey(chatId));
+    setConversationId(savedConversationId || null);
 
     const savedMessages = loadFromStorage(`${STORAGE_KEYS.MESSAGES}${chatId}`, []);
     const savedFlowState = loadFromStorage(`${STORAGE_KEYS.FLOW_STATE}${chatId}`, {
@@ -515,6 +538,7 @@ const Chatbot = () => {
     setCurrentFlow(savedFlowState);
   };
 
+  // When starting a new chat, reset conversationId and save it
   const handleNewChat = () => {
     const newChatId = nextChatId.toString();
     const newChat = {
@@ -530,6 +554,8 @@ const Chatbot = () => {
     setNextChatId(nextChatId + 1);
     setActiveChatId(newChatId);
     setSearchParams({ chatId: newChatId });
+    setConversationId(null);
+    sessionStorage.setItem(getConversationIdKey(newChatId), "");
 
     setCurrentFlow({
       step: 'service',
@@ -570,25 +596,29 @@ const Chatbot = () => {
       const timestamp = Date.now();
 
       // Enhanced flow context with service information
-    //   const flowContext = currentFlow.selectedService ? {
-    //     service: currentFlow.selectedService,
-    //     serviceTitle: PREDEFINED_QUESTIONS.serviceTypes.find(s => s.id === currentFlow.selectedService)?.title,
-    //     mainCategory: currentFlow.selectedMain,
-    //     mainCategoryTitle: currentFlow.selectedMain ?
-    //       PREDEFINED_QUESTIONS.mainCategories[currentFlow.selectedService]?.find(c => c.id === currentFlow.selectedMain)?.title : null,
-    //     subCategory: currentFlow.selectedSub,
-    //     subCategoryTitle: currentFlow.selectedSub ?
-    //       PREDEFINED_QUESTIONS.subCategories[currentFlow.selectedMain]?.find(s => s.id === currentFlow.selectedSub)?.title : null
-    //   } : null;
+      //   const flowContext = currentFlow.selectedService ? {
+      //     service: currentFlow.selectedService,
+      //     serviceTitle: PREDEFINED_QUESTIONS.serviceTypes.find(s => s.id === currentFlow.selectedService)?.title,
+      //     mainCategory: currentFlow.selectedMain,
+      //     mainCategoryTitle: currentFlow.selectedMain ?
+      //       PREDEFINED_QUESTIONS.mainCategories[currentFlow.selectedService]?.find(c => c.id === currentFlow.selectedMain)?.title : null,
+      //     subCategory: currentFlow.selectedSub,
+      //     subCategoryTitle: currentFlow.selectedSub ?
+      //       PREDEFINED_QUESTIONS.subCategories[currentFlow.selectedMain]?.find(s => s.id === currentFlow.selectedSub)?.title : null
+      //   } : null;
 
-      const messageData = {
-        text: input,
-        user: true,
-        timestamp: timestamp,
-        // flowContext: flowContext
-      };
+      // const messageData = {
+      //   text: input,
+      //   user: true,
+      //   timestamp: timestamp,
+      //   // flowContext: flowContext
+      // };
 
-      dispatch(addMessage(messageData));
+      // Split input into separate queries by new line
+      const queries = input.split("\n").map(q => q.trim()).filter(Boolean);
+      //dispatch(addMessage(messageData));
+
+      dispatch(addMessage({ text: input, user: true, timestamp }));
 
       if (activeChatId) {
         setChatHistory((prevHistory) =>
@@ -606,128 +636,116 @@ const Chatbot = () => {
         inputRef.current.focus();
       }
 
-      try {
-        setIsTyping(true);
-        let responseData;
+      for (let i = 0; i < queries.length; i++) {
+        const q = queries[i];
+        try {
+          setIsTyping(true);
 
-        // Route to appropriate API based on service type
-        if (currentFlow.isAtlasFlow) {
-          const rawResponse = await chatWithAtlas(
-            currentFlow,
-            input,
-            sessionStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)
-          );
-          responseData = normalizeAtlasResponse(rawResponse);
-        } else {
-          responseData = await chatWithAssistIQ(currentFlow, input, user);
-        }
+          let responseData;
+          if (currentFlow.isAtlasFlow) {
+            const rawResponse = await chatWithAtlas(
+              currentFlow,
+              q,
+              sessionStorage.getItem(STORAGE_KEYS.AUTH_TOKEN),
+              conversationId
+            );
+            responseData = normalizeAtlasResponse(rawResponse);
+          } else {
+            console.log("conv_id",conversationId);
+            responseData = await chatWithAssistIQ(currentFlow, q, user, conversationId);
+          }
 
-        // Enhanced API payload with service context
-        // const apiPayload = {
-        //   message: input,
-        //   context: flowContext ? {
-        //     service: flowContext.serviceTitle,
-        //     category: flowContext.mainCategoryTitle,
-        //     subCategory: flowContext.subCategoryTitle,
-        //   } : null,
-        //   conversationFlow: currentFlow,
-        //   user: user,
-        //   serviceType: currentFlow.selectedService
-        // };
+          // If backend returns a conversation_id, update and persist it for this chat
+          if (responseData.conversation_id && responseData.conversation_id !== conversationId) {
+            setConversationId(responseData.conversation_id);
+            if (activeChatId) {
+              sessionStorage.setItem(getConversationIdKey(activeChatId), responseData.conversation_id);
+            }
+          }
 
-        // const { data } = await axios.post(
-        //   "https://run.mocky.io/v3/610f9d23-c4d1-4746-a28f-06401aeb89e0",
-        //   apiPayload
-        // );
-
-        console.log("response data", responseData);
-
-        setTimeout(() => {
+          // Dispatch each response separately
           dispatch(
             addMessage({
-              text: responseData.message,
+              text: responseData.message || responseData.result,
               user: false,
               timestamp: Date.now(),
-              response: responseData || null,
+              response: responseData,
               isAtlasResponse: currentFlow.isAtlasFlow
             })
           );
+        } catch (error) {
+          dispatch(
+            addMessage({
+              text: `Error fetching response for: "${q}".`,
+              user: false,
+              timestamp: Date.now(),
+            })
+          );
+        } finally {
           setIsTyping(false);
-        }, 1000);
-      } catch (error) {
-        setIsTyping(false);
-        const errorMessage = currentFlow.isAtlasFlow
-          ? `Error connecting to ${currentFlow.selectedMain} service. Please try again.`
-          : "Error fetching response. Please try again.";
-        dispatch(
-          addMessage({
-            text: "Error fetching response. Please try again.",
-            user: false,
-            timestamp: Date.now(),
-          })
-        );
+        }
       }
     }
   };
 
   const handleSuggestionClick = async (suggestion) => {
-  // Add the suggestion as a user message
-  const messageData = {
-    text: suggestion,
-    user: true,
-    timestamp: Date.now(),
-  };
+    // Add the suggestion as a user message
+    const messageData = {
+      text: suggestion,
+      user: true,
+      timestamp: Date.now(),
+    };
 
-  dispatch(addMessage(messageData));
+    dispatch(addMessage(messageData));
 
-  // Update chat history if needed
-  if (activeChatId) {
-    setChatHistory((prevHistory) =>
-      prevHistory.map((chat) =>
-        chat.id.toString() === activeChatId
-          ? { ...chat, lastMessage: suggestion, timestamp: Date.now() }
-          : chat
-      )
-    );
-  }
+    // Update chat history if needed
+    if (activeChatId) {
+      setChatHistory((prevHistory) =>
+        prevHistory.map((chat) =>
+          chat.id.toString() === activeChatId
+            ? { ...chat, lastMessage: suggestion, timestamp: Date.now() }
+            : chat
+        )
+      );
+    }
 
-  // Trigger the API call for the suggestion
-  try {
-    setIsTyping(true);
-    const rawResponse = await chatWithAtlas(
-      currentFlow,
-      suggestion,
-      sessionStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)
-    );
-    
-    const responseData = normalizeAtlasResponse(rawResponse);
+    // Trigger the API call for the suggestion
+    try {
+      setIsTyping(true);
+      const rawResponse = await chatWithAtlas(
+        currentFlow,
+        suggestion,
+        sessionStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)
+      );
 
-    setTimeout(() => {
+      const responseData = normalizeAtlasResponse(rawResponse);
+
+      setTimeout(() => {
+        dispatch(
+          addMessage({
+            text: responseData.message || "Check the resources below:",
+            user: false,
+            timestamp: Date.now(),
+            response: responseData || null,
+            isAtlasResponse: currentFlow.isAtlasFlow
+          })
+        );
+        setIsTyping(false);
+      }, 1000);
+    } catch (error) {
+      setIsTyping(false);
+      console.error('Error handling suggestion:', error);
       dispatch(
         addMessage({
-          text: responseData.message || "Check the resources below:",
+          text: `Error getting information for: "${suggestion}". Please try again.`,
           user: false,
           timestamp: Date.now(),
-          response: responseData || null,
-          isAtlasResponse: currentFlow.isAtlasFlow
         })
       );
-      setIsTyping(false);
-    }, 1000);
-  } catch (error) {
-    setIsTyping(false);
-    console.error('Error handling suggestion:', error);
-    dispatch(
-      addMessage({
-        text: `Error getting information for: "${suggestion}". Please try again.`,
-        user: false,
-        timestamp: Date.now(),
-      })
-    );
-  }
-};
+    }
+  };
 
-  
+
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
@@ -786,29 +804,29 @@ const Chatbot = () => {
           </div>
 
           {shouldShowInput && (
-            <div className="chat-input-container absolute bottom-6 left-1/2 transform -translate-x-1/2 w-full max-w-3xl px-4 z-50">
-                <div className="chat-input-wrapper shadow-md rounded-full">
-                    <textarea
-                    ref={inputRef}
-                    value={input}
-                    onChange={handleInputChange}
-                    placeholder={"Type your message..."}
-                    className="chat-input"
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSend();
-                        }
-                    }}
-                    />
-                    <button
-                    className="send-button"
-                    onClick={handleSend}
-                    disabled={input.trim() === ""}
-                    >
-                    <SendIcon fontSize="small" />
-                    </button>
-                </div>
+            <div className="chat-input-container relative bottom-6 left-1/2 transform -translate-x-1/2 w-full max-w-3xl px-4 z-50">
+              <div className="chat-input-wrapper shadow-md rounded-full">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={handleInputChange}
+                  placeholder={"Type your message..."}
+                  className="chat-input"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                />
+                <button
+                  className="send-button"
+                  onClick={handleSend}
+                  disabled={input.trim() === ""}
+                >
+                  <SendIcon fontSize="small" />
+                </button>
+              </div>
             </div>
 
           )}
