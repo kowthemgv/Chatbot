@@ -10,7 +10,7 @@ import MessageBubble from "./components/MessageBubble";
 import ChatHeader from "./components/ChatHeader";
 import WelcomeMessage from "./components/WelcomeMessage";
 import { chatWithAtlas } from "./api/AtlasAPI";
-import { chatWithAssistIQ } from "./api/AssistIQAPI";
+import { chatWithAssistIQ, parseInput } from "./api/AssistIQAPI";
 
 // Enhanced Predefined questions configuration with service types
 const PREDEFINED_QUESTIONS = {
@@ -592,6 +592,9 @@ const Chatbot = () => {
   };
 
   const handleSend = async () => {
+
+    inputRef.current.style.height = "auto"; // Reset height before measuring
+
     if (input.trim() !== "") {
       const timestamp = Date.now();
 

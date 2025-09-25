@@ -1,6 +1,13 @@
 import axios from "axios";
 
-export const chatWithAssistIQ = async (flowState, question, userData,conversationId) => {
+export function parseInput(input) {
+  return input
+    .trim()
+    .split("\n")
+    .map(line => line.trim());
+}
+
+export const chatWithAssistIQ = async (flowState, question, userData) => {
     
     const API_URL = "http://assitiq-alb-1555551784.us-east-1.elb.amazonaws.com/query";
     let parsedUser = typeof userData === 'string' ? JSON.parse(userData) : user;
