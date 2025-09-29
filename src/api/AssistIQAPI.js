@@ -7,7 +7,7 @@ export function parseInput(input) {
     .map(line => line.trim());
 }
 
-export const chatWithAssistIQ = async (flowState, question, userData) => {
+export const chatWithAssistIQ = async (flowState, question, userData, conversationId) => {
     
     const API_URL = "http://assitiq-alb-1555551784.us-east-1.elb.amazonaws.com/query";
     let parsedUser = typeof userData === 'string' ? JSON.parse(userData) : user;
